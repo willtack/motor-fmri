@@ -7,35 +7,28 @@
 #
 #   Will Tackett, University of Pennsylvania
 #
-#   August 7th, 2019
+#   August 13th, 2019
 #
 
 from __future__ import division
 from __future__ import print_function
 
-import glob
-import json
+
 import os
-import sys
-from builtins import range
-from builtins import str
 
 import matplotlib.pyplot as plt
-import nibabel
 import nilearn.plotting
-import nipype.algorithms.modelgen as model  # model generation
-import nipype.interfaces.ants as ants  # fsl
-import nipype.interfaces.fsl as fsl  # fsl
-import nipype.interfaces.io as nio  # Data i/o
-import nipype.interfaces.utility as util  # utility
-import nipype.pipeline.engine as pe  # pipeline engine
+import nipype.algorithms.modelgen as model
+import nipype.interfaces.fsl as fsl
+import nipype.pipeline.engine as pe
 import numpy as np
 import pandas as pd
 from bids import BIDSLayout
 from nipype.interfaces.base import Bunch
+from jinja2 import FileSystemLoader, Environment
 
 fsl.FSLCommand.set_default_output_type('NIFTI_GZ')
-datadir = '/home/will/report_gear/'
+datadir = '/home/will/PycharmProjects/report_gear/'
 bidsdir = datadir + 'bids_dataset'
 
 # try:
@@ -93,7 +86,7 @@ def setup(taskname):
 
 def model_fitting(source_img, prepped_img, subject_info, task):
 
-    taskdir = datadir + task + '/'
+    taskdir = datadir + 'outputs/' + task + '/'
     if not os.path.exists(taskdir):
         os.mkdir(taskdir)
 
@@ -148,11 +141,22 @@ def model_fitting(source_img, prepped_img, subject_info, task):
 
     return thresh_img
 
+# class PostStats:
+#     """
+#     Class to perform analyses on data
+#     """
+#
+#     def __init__(self, img, task):
+#         self.img = img
+#         self.task = task
+#
+#     taskdir = datadir + self.task + '/'
+
 
 # noinspection PyTypeChecker
 def post_stats(img, task):
 
-    taskdir = datadir + task + '/'
+    taskdir = datadir + 'outputs/' + task + '/'
     if not os.path.exists(taskdir):
         os.mkdir(taskdir)
 
@@ -287,242 +291,82 @@ def post_stats(img, task):
     column = ['left %', 'right %', 'asymmetry ratio']
     data = np.array([left_stats, right_stats, ars]).transpose()
     df = pd.DataFrame(data, index=row, columns=column)
-    df_string = df.to_html().replace('<table border="1" class="dataframe">',
-                                     '<table class="table table-bordered" style="width:45%" >').replace(
-        '<tr style="text-align: right;">', '<tr style="text-align: left;">')
-
-    with open(taskdir + task + "_table.txt", "w") as text_file:
-        text_file.write(df_string)
+    df.to_html(taskdir + task + "_table.html")
 
     # interactive viewer
     html_view = nilearn.plotting.view_img(nilearn.image.smooth_img(img, 8), threshold=5, bg_img='MNI152', vmax=10, title=task)
     html_view.save_as_html(taskdir + task + '_viewer.html')
 
 
-def generate_report(tasks):
+# Configure Jinja and ready the templates
+env = Environment(
+    loader=FileSystemLoader(searchpath="templates")
+)
 
-    task_list = tasks
+# Assemble the templates we'll use
+base_template = env.get_template("report.html")
+summary_section_template = env.get_template("summary_section.html")
+task_section_template = env.get_template("task_section.html")
+
+
+def main():
+    """
+    Entry point for the script.
+    Render a template and write it to file.
+    :return:
+    """
+
+    #task_list = layout.get_tasks()
+    task_list = ['object', 'rhyme']
+    if "rest" in task_list:
+        task_list.remove('rest')
     gb = {}
     viewers = {}
     bars = {}
     tables = {}
 
     for tsk in task_list:
-        taskdir = datadir + tsk + '/'
+        taskdir = datadir + 'outputs/' + tsk + '/'
         gb[tsk + '_gb'] = taskdir + tsk + "_gb.svg"
         viewers[tsk + '_viewer'] = taskdir + tsk + "_viewer.html"
         bars[tsk + '_bar'] = taskdir + tsk + "_bar.svg"
-        with open(taskdir + tsk + '_table.txt') as file:
-            table_string = file.read()
-        tables[tsk + '_table'] = table_string
+        tables[tsk + '_table'] = taskdir + tsk + "_table.html"
 
-    legend = '''<table class="table table-striped">
-                <th>Key</th><th>Definition</th> 
-                <tr>
-                    <td>tSNR</td>
-                    <td><img src="''' + datadir + '''imgs/tsnr_equation.png"</img>...where
-                    <img src="''' + datadir + '''imgs/mean_signal.png"</img > is the average BOLD signal (across time), 
-                    and <img src="''' + datadir + '''imgs/std_dev.png"</img>is the 
-                    corresponding temporal standard-deviation map.</td> </tr>
-                    <tr> <td>Left/Right %</td> <td>Activated voxels (p < 0.05, corr.) as a percentage of the specified 
-                    ROI in the left/right side </td>
-                </tr>
-                <tr> 
-                    <td>Asymmetry Ratio</td> <td>
-                    <img src="''' + datadir + '''imgs/asym_ratio_equation.png"</img>
-                    ...where “left activation” = “Left %” (as above)</td>
-                     </tr>
-                <tr> 
-                <td>Mean FD</td>
-                <td>The average frame-wise displacement, an expression of instantaneous head motion</a></td>
-                </tr>
-                </table> '''
+    # Content to be published
+    title = "presurgical fMRI Report"
 
-    html_string = '''<?xml version="1.0" encoding="utf-8" ?> <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 
-    Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"> <html 
-    xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"> <head> <meta http-equiv="Content-Type" 
-    content="text/html; charset=utf-8" /> <meta name="generator" content="Docutils 0.12: 
-    http://docutils.sourceforge.net/" /> <title></title> <script 
-    src="https://code.jquery.com/jquery-3.3.1.slim.min.js" 
-    integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" 
-    crossorigin="anonymous"></script> <script 
-    src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" 
-    integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" 
-    crossorigin="anonymous"></script> <link rel="stylesheet" 
-    href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" 
-    integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous"> 
-    <link rel="stylesheet" href="styles.css">
-    </head>
-    <body>
-
-    <nav class="navbar fixed-top navbar-expand-lg navbar-light bg-light">
-    <div class="collapse navbar-collapse">
-        <ul class="navbar-nav">
-            <li class="nav-item"><a class="nav-link" href="#ses-01_task-object_run-01">Object Naming</a></li>
-            <li class="nav-item"><a class="nav-link" href="#ses-01_task-rhyme_run-01">Rhyme Matching</a></li>
-            <li class="nav-item"><a class="nav-link" href="#ses-01_task-scenemem_run-01">Scene Memory</a></li>
-            <li class="nav-item"><a class="nav-link" href="#ses-01_task-sentence_run-01">Sentence Completion</a></li>
-            <li class="nav-item"><a class="nav-link" href="#ses-01_task-wordgen_run-01">Wordgen</a></li>
-        </ul>
-    </div>
-    </nav>
-
-
-
-    <div id="Summary" style="top-padding: -20px">
-        <h1 class="sub-report-title">Summary</h1>
-    <ul class="elem-desc">
-        <li>Subject ID: sub-P69</li>
-          <li>Structural images: 1 T1-weighted </li>
-          <li>Functional series: ''' + str(len(layout.get_tasks())) + '''</li>
-               <ul class="elem-desc">
-               <li>Task: ''' + layout.get_tasks()[0] + '''</li>
-               <li>Task: ''' + layout.get_tasks()[1] + '''</li>
-               <li>Task: ''' + layout.get_tasks()[2] + '''</li>
-               <li>Task: ''' + layout.get_tasks()[3] + '''</li>
-               <li>Task: ''' + layout.get_tasks()[4] + '''</li>
-               <li>Task: ''' + layout.get_tasks()[5] + '''</li>
-               </ul>
-           <li>Resampling targets: MNI152NLin2009cAsym, T1w </li>
-        </ul>
-        <h3> Reference table </h3>
-        ''' + legend + '''
-    </div>
-
-    <div id="Functional">
-            <div id="ses-01_task-object_run-01" style="margin-top: 50px">
-                <h1 class="run-title">Object Naming</h1>
-                <h3 class="elem-title">Glass brain</h3>
-                <div class="elem-image">
-                            <object class="svg-reportlet" type="image/svg+xml" data="''' + gb['object_gb'] + '''">
-                            </object>
-                </div>
-
-                <h3 style="margin-top: 20px"><a href=''' + viewers['object_viewer'] + '''>Statistical Map Viewer</a></h3>
-
-                <h3 style="margin-top: 20px"> Statistics </h3>
-
-                <div style="border: 1px solid black;"> 
-                <div class="table">
-                    ''' + tables['object_table'] + '''
-                </div>
-                <div class="barplot">
-                            <object data="''' + bars['object_bar'] + '''">
-                            </object>
-                </div>
-                </div>
-
-            </div>
-            
-            <div id="ses-01_task-rhyme_run-01" style="margin-top: 75px">
-                <h1 class="run-title">Rhyme Matching</h1>
-                <h3 class="elem-title">Glass brain</h3>
-                <div class="elem-image">
-                            <object class="svg-reportlet" type="image/svg+xml" data="''' + gb['rhyme_gb'] + '''">
-                            </object>
-                </div>
-
-                <h3 style="margin-top: 20px"><a href=''' + viewers['rhyme_viewer'] + '''>Statistical Map Viewer</a></h3>
-
-                <h3 style="margin-top: 20px"> Statistics </h3>
-
-                <div style="border: 1px solid black;"> 
-                <div class="table">
-                    ''' + tables['rhyme_table'] + '''
-                </div>
-                <div class="barplot">
-                            <object data="''' + bars['rhyme_bar'] + '''">
-                            </object>
-                </div>
-                </div>
-                
-                
-            <div id="ses-01_task-scenemem_run-01" style="margin-top: 75px">
-                <h1 class="run-title">Scene Memory</h1>
-                <h3 class="elem-title">Glass brain</h3>
-                <div class="elem-image">
-                            <object class="svg-reportlet" type="image/svg+xml" data="''' + gb['scenemem_gb'] + '''">
-                            </object>
-                </div>
-
-                <h3 style="margin-top: 20px"><a href=''' + viewers['scenemem_viewer'] + '''>Statistical Map Viewer</a></h3>
-
-                <h3 style="margin-top: 20px"> Statistics </h3>
-
-                <div style="border: 1px solid black;"> 
-                <div class="table">
-                    ''' + tables['scenemem_table'] + '''
-                </div>
-                <div class="barplot">
-                            <object data="''' + bars['scenemem_bar'] + '''">
-                            </object>
-                </div>
-            </div>       
-                
-            <div id="ses-01_task-sentence_run-01" style="margin-top: 75px">
-                <h1 class="run-title">Sentence Completion</h1>
-                <h3 class="elem-title">Glass brain</h3>
-                <div class="elem-image">
-                            <object class="svg-reportlet" type="image/svg+xml" data="''' + gb['sentence_gb'] + '''">
-                            </object>
-                </div>
-
-                <h3 style="margin-top: 20px"><a href=''' + viewers['sentence_viewer'] + '''>Statistical Map Viewer</a></h3>
-
-                <h3 style="margin-top: 20px"> Statistics </h3>
-
-                <div style="border: 1px solid black;"> 
-                <div class="table">
-                    ''' + tables['sentence_table'] + '''
-                </div>
-                <div class="barplot">
-                            <object data="''' + bars['sentence_bar'] + '''">
-                            </object>
-                </div>
-            </div>
-                
-            <div id="ses-01_task-wordgen_run-01" style="margin-top: 75px">
-                <h1 class="run-title">Word Generation</h1>
-                <h3 class="elem-title">Glass brain</h3>
-                <div class="elem-image">
-                            <object class="svg-reportlet" type="image/svg+xml" data="''' + gb['wordgen_gb'] + '''">
-                            </object>
-                </div>
-
-                <h3 style="margin-top: 20px"><a href=''' + viewers['wordgen_viewer'] + '''>Statistical Map Viewer</a></h3>
-
-                <h3 style="margin-top: 20px"> Statistics </h3>
-
-                <div style="border: 1px solid black;"> 
-                <div class="table">
-                    ''' + tables['wordgen_table'] + '''
-                </div>
-                <div class="barplot">
-                            <object data="''' + bars['wordgen_bar'] + '''">
-                            </object>
-                </div>
-            </div>
-
-            </div>
-    </div>
-    </body>
-
-    '''
-
-    f = open(datadir + 'report.html', 'w')
-    f.write(html_string)
-    f.close()
-
-
-def main():
-    task_list = layout.get_tasks()
-    task_list.remove('rest')
+    # Produce our section blocks
+    sections = list()
+    sections.append(summary_section_template.render(
+        subject_id=layout.get(return_type='id', target='subject')[0].strip("[']"),
+        task_list=task_list,
+        task_number=len(task_list),
+        tsnr_eq=datadir + 'imgs/tsnr_equation.png',
+        mean_eq=datadir + 'imgs/mean_signal.png',
+        std_dev_eq=datadir + 'imgs/std_dev.png',
+        asym_ratio_eq=datadir + 'imgs/asym_ratio_equation.png'
+    ))
 
     for task in task_list:
         (source_epi, input_functional, info) = setup(task)
         thresholded_img = model_fitting(source_epi, input_functional, info, task)
         post_stats(thresholded_img, task)
-    generate_report(task_list)
+        sections.append(task_section_template.render(
+            section_name="ses-01_task-" + task + "_run-01",
+            task_title=task,
+            gb_path=gb[task+'_gb'],
+            viewer_path=viewers[task+'_viewer'],
+            bar_path=bars[task+'_bar'],
+            table=tables[task+'_table']
+        ))
+
+    # Produce and write the report to file
+    with open("outputs/report.html", "w") as f:
+        f.write(base_template.render(
+            title=title,
+            sections=sections
+        ))
 
 
-main()
+if __name__ == "__main__":
+    main()

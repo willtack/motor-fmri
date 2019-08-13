@@ -1,0 +1,13 @@
+# .gitignore
+
+# Don't add the virtual environment, IDE, outputs, or bids_dataset
+venv
+.idea
+outputs
+bids_dataset
+stat_result.json
+object
+rhyme
+scenemem
+sentence
+wordgen

@@ -1,0 +1,35 @@
+    <div id="Summary" style="top-padding: -20px">
+        <h1 class="sub-report-title">Summary</h1>
+    <ul class="elem-desc">
+        <li>Subject ID: {{subject_id}}</li>
+          <li>Functional series: {{task_number}}</li>
+               <ul class="elem-desc">
+                   {% for task in task_list %}
+                    <li>{{task}}</li>
+                   {% endfor %}
+               </ul>
+        </ul>
+        <h3> Reference table </h3>
+        <table class="table table-striped">
+                <th>Key</th><th>Definition</th>
+                <tr>
+                    <td>tSNR</td>
+                    <td> <img src= {{tsnr_eq}}> ...where
+                    <img src= {{mean_signal_eq}}>  is the average BOLD signal (across time),
+                    and <img src={{std_dev_eq}}> is the
+                    corresponding temporal standard-deviation map.</td>
+                </tr>
+                <tr> <td>Left/Right %</td> <td>Activated voxels (p < 0.05, corr.) as a percentage of the specified
+                    ROI in the left/right side </td>
+                </tr>
+                <tr>
+                    <td>Asymmetry Ratio</td>
+                    <td><img src={{asym_ratio_eq}}
+                    ...where “left activation” = “Left %” (as above)></td>
+                </tr>
+                <tr>
+                    <td>Mean FD</td>
+                    <td>The average frame-wise displacement, an expression of instantaneous head motion</a></td>
+                </tr>
+                </table>
+    </div>
