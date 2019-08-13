@@ -1,0 +1,21 @@
+{
+	"name": "presurgical_report",
+	"label": "Presurgical Report Generator",
+	"description": "Generates a report from an fmri scan of an 				epilepsy patient",
+	"author": "Will Tackett",
+	"maintainer": "Will Tackett <william.tackett@pennmedicine.upenn.edu>",
+	"source": "none",
+	"url": "none",
+	"version": "3.1.1",
+	"license": "BSD-3-Clause",
+	"inputs": {
+		"fmriprepDir": {
+			"description": "Full path to directory containing 				 fmriprep results",
+			"base": "file",
+		},
+	"config": {},
+	"command": "./report.py",
+	"author": "Will Tackett",
+	"maintainer": "Will Tackett"		
+	}
+}
