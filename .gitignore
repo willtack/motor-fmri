@@ -6,8 +6,3 @@ venv
 outputs
 bids_dataset
 stat_result.json
-object
-rhyme
-scenemem
-sentence
-wordgen
