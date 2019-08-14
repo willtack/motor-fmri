@@ -1,0 +1,9 @@
+<nav class="navbar fixed-top navbar-expand-lg navbar-light bg-light">
+    <div class="collapse navbar-collapse">
+        <ul class="navbar-nav">
+            {% for task in task_list %}
+                <li class="nav-item"><a class="nav-link" href={{'\"#ses-01_task-'+task+'_run-01\"'}}>{{task}}</a></li>
+            {% endfor %}
+        </ul>
+    </div>
+    </nav>
