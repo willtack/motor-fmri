@@ -13,7 +13,6 @@
 from __future__ import division
 from __future__ import print_function
 
-
 import os
 
 import matplotlib.pyplot as plt
@@ -38,7 +37,6 @@ bidsdir = datadir + 'bids_dataset'
 #     sys.exit(1)
 
 layout = BIDSLayout(bidsdir)
-
 
 lba_mask = datadir + "masks/ba_left.nii.gz"
 rba_mask = datadir + "masks/ba_right.nii.gz"
@@ -85,7 +83,6 @@ def setup(taskname):
 
 
 def model_fitting(source_img, prepped_img, subject_info, task):
-
     taskdir = datadir + 'outputs/' + task + '/'
     if not os.path.exists(taskdir):
         os.mkdir(taskdir)
@@ -151,8 +148,8 @@ class PostStats:
         self.img = img
         self.task = task
         self.taskdir = datadir + 'outputs/' + task + '/'
-        self.rois = rois # a list of strings used as labels in plot
-        self.masks = masks # masks to do statistics on
+        self.rois = rois  # a list of strings used as labels in plot
+        self.masks = masks  # masks to do statistics on
 
         self.left_stats, self.right_stats, self.ars = self.calc_stats()
 
@@ -163,7 +160,8 @@ class PostStats:
                                               output_file=self.taskdir + self.task + "_gb.svg",
                                               display_mode='lyrz', colorbar=True, plot_abs=False, threshold=5)
         else:
-            nilearn.plotting.plot_glass_brain(nilearn.image.smooth_img(self.img, 8), output_file=self.taskdir + self.task + "_gb.svg",
+            nilearn.plotting.plot_glass_brain(nilearn.image.smooth_img(self.img, 8),
+                                              output_file=self.taskdir + self.task + "_gb.svg",
                                               display_mode='lyrz', colorbar=True, plot_abs=False, threshold=3.5)
 
         out_file = self.taskdir + self.task + "_gb.svg"
@@ -188,12 +186,12 @@ class PostStats:
 
     def calc_stats(self):
         masks = self.masks
-        vox = {} # dictionary of mask: mask voxels
-        res = {} # dictionary of roi: percent activation
-        left_stats = [] # for plot
+        vox = {}  # dictionary of mask: mask voxels
+        res = {}  # dictionary of roi: percent activation
+        left_stats = []  # for plot
         right_stats = []
-        ars = [] # list of asymmetry ratios for table
-        for mask in masks: # order is important e.g. lhem, rhem, lba, rba
+        ars = []  # list of asymmetry ratios for table
+        for mask in masks:  # order is important -- it must correspond with the ROI labels (self.rois)
             roi = os.path.basename(mask).split('.')[0]
             vox[roi + '_vox'] = self.get_mask_vox(mask)
             res[roi] = round(self.get_roi_perc(self.img, mask, vox[roi + '_vox']))
@@ -201,14 +199,14 @@ class PostStats:
                 left_stats.append(res[roi])
             else:
                 right_stats.append(res[roi])
-            for i in range(0, len(left_stats)):
-                ar_result = round(self.calc_ar(left_stats[i], right_stats[i]))
-                ars.append(ar_result)
+
+        for i in range(0, len(left_stats)):
+            ar_result = round(self.calc_ar(left_stats[i], right_stats[i]), 2)
+            ars.append(ar_result)
 
         return left_stats, right_stats, ars
 
-
-     def create_bar_plot(self):
+    def create_bar_plot(self):
         # Bar graph
         index = np.arange(len(self.left_stats))
         bar_width = 0.2
@@ -233,7 +231,7 @@ class PostStats:
         plt.savefig(self.taskdir + self.task + '_bar.svg')
         plt.close()
 
-        plot_file = self.taskdir + self.task  + '_bar.svg'
+        plot_file = self.taskdir + self.task + '_bar.svg'
         return plot_file
 
     def generate_statistics_table(self):
@@ -245,158 +243,11 @@ class PostStats:
         return html_table
 
     def create_html_viewer(self):
-        html_view = nilearn.plotting.view_img(nilearn.image.smooth_img(self.img, 8), threshold=5, bg_img='MNI152', vmax=10, title=self.task)
+        html_view = nilearn.plotting.view_img(nilearn.image.smooth_img(self.img, 8), threshold=5, bg_img='MNI152', vmax=10,
+                                              title=self.task)
         html_view.save_as_html(self.taskdir + self.task + '_viewer.html')
         viewer_file = self.taskdir + self.task + '_viewer.html'
         return viewer_file
-
-# def post_stats(img, task):
-#
-#     taskdir = datadir + 'outputs/' + task + '/'
-#     if not os.path.exists(taskdir):
-#         os.mkdir(taskdir)
-#
-#     # save a glass brain image, threshold of z > 6
-#     if task == 'scenemem':
-#         # masked_img = fsl.ImageMaths(in_file=img, mask_file=mtl_mask, out_file=taskdir + task + "_img_masked.nii.gz")
-#         nilearn.plotting.plot_glass_brain(nilearn.image.smooth_img(img, 8),
-#                                           output_file=taskdir + task + "_gb.svg",
-#                                           display_mode='lyrz', colorbar=True, plot_abs=False, threshold=5)
-#     else:
-#         nilearn.plotting.plot_glass_brain(nilearn.image.smooth_img(img, 8), output_file=taskdir + task + "_gb.svg",
-#                                           display_mode='lyrz', colorbar=True, plot_abs=False, threshold=3.5)
-#
-#     def get_mask_vox(msk):
-#         mask_stat = fsl.ImageStats(in_file=msk, op_string=' -V')
-#         mask_run = mask_stat.run()
-#         mask_vox = list(mask_run.outputs.out_stat)
-#         return mask_vox[0]
-#
-#     def get_roi_perc(image, msk, mask_vox):
-#         roi_stat = fsl.ImageStats(in_file=image, op_string='-k ' + msk + ' -V')
-#         print(roi_stat.cmdline)
-#         stat_run = roi_stat.run()
-#         stat = float(list(stat_run.outputs.out_stat)[0])
-#         perc = (stat / mask_vox) * 100
-#         return perc
-#
-#     def calc_ar(left, right):
-#         return (left - right) / (left + right)
-#
-#     vox = {}  # dictionary of mask: mask voxels
-#     res = {}  # dictionary of roi: percent activation
-#     left_stats = []  # for graph
-#     right_stats = []
-#     rois = []  # roi labels for graph
-#     ars = []  # list of asymmetry ratios for table
-#
-#     if task == 'object':
-#         rois = ['whole brain', "broca's area"]
-#         masks = [lba_mask, rba_mask, lhem_mask, rhem_mask]
-#         for mask in masks:
-#             roi = os.path.basename(mask).split('.')[0]
-#             vox[roi + '_vox'] = get_mask_vox(mask)
-#             res[roi] = round(get_roi_perc(img, mask, vox[roi + '_vox']))
-#         left_stats = [res['hem_left'], res['lba']]
-#         right_stats = [res['hem_right'], res['rba']]
-#         ba_ar = round(calc_ar(res['lba'], res['rba']), 2)
-#         hem_ar = round(calc_ar(res['hem_left'], res['hem_right']), 2)
-#         ars = [hem_ar, ba_ar]
-#     elif task == 'rhyme':
-#         rois = ['whole brain', "broca's area", "wernicke's area"]
-#         masks = [lba_mask, rba_mask, lhem_mask, rhem_mask, lwa_mask, rwa_mask]
-#         for mask in masks:
-#             roi = os.path.basename(mask).split('.')[0]
-#             vox[roi + '_vox'] = get_mask_vox(mask)
-#             res[roi] = round(get_roi_perc(img, mask, vox[roi + '_vox']))
-#         left_stats = [res['hem_left'], res['lba'], res['stg_post_left']]
-#         right_stats = [res['hem_right'], res['rba'], res['stg_post_right']]
-#         ba_ar = round(calc_ar(res['lba'], res['rba']), 2)
-#         hem_ar = round(calc_ar(res['hem_left'], res['hem_right']), 2)
-#         wa_ar = round(calc_ar(res['stg_post_left'], res['stg_post_right']), 2)
-#         ars = [hem_ar, ba_ar, wa_ar]
-#     elif task == 'scenemem':
-#         rois = ['mTL', 'hippocampus', 'fusiform gyrus', 'parahippocampal gyrus']
-#         masks = [lmtl_mask, rmtl_mask, lhc_mask, rhc_mask, lffg_mask, rffg_mask, lphg_mask, rphg_mask]
-#         for mask in masks:
-#             roi = os.path.basename(mask).split('.')[0]
-#             vox[roi + '_vox'] = get_mask_vox(mask)
-#             res[roi] = round(get_roi_perc(img, mask, vox[roi + '_vox']))
-#         left_stats = [res['hpf_left_bin'], res['hippocampus_left_bin'], res['ffg_left_bin'], res['phg_left_bin']]
-#         right_stats = [res['hpf_right_bin'], res['hippocampus_right_bin'], res['ffg_right_bin'], res['phg_right_bin']]
-#         mtl_ar = round(calc_ar(res['hpf_left_bin'], res['hpf_right_bin']), 2)
-#         hc_ar = round(calc_ar(res['hippocampus_left_bin'], res['hippocampus_right_bin']), 2)
-#         ffg_ar = round(calc_ar(res['ffg_left_bin'], res['ffg_right_bin']), 2)
-#         phg_ar = round(calc_ar(res['phg_left_bin'], res['phg_right_bin']), 2)
-#         ars = [mtl_ar, hc_ar, ffg_ar, phg_ar]
-#     elif task == 'sentence':
-#         rois = ['wb', "ba", "superior TG", "middle TG", "inferior TG"]
-#         masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lstg_mask, rstg_mask, lmtg_mask, rmtg_mask, litg_mask, ritg_mask]
-#         for mask in masks:
-#             roi = os.path.basename(mask).split('.')[0]
-#             vox[roi + '_vox'] = get_mask_vox(mask)
-#             res[roi] = round(get_roi_perc(img, mask, vox[roi + '_vox']))
-#         left_stats = [res['hem_left'], res['lba'], res['stg_left'], res['mtg_left'], res['itg_left']]
-#         right_stats = [res['hem_right'], res['rba'], res['stg_right'], res['mtg_right'], res['itg_right']]
-#         ba_ar = round(calc_ar(res['lba'], res['rba']), 2)
-#         hem_ar = round(calc_ar(res['hem_left'], res['hem_right']), 2)
-#         stg_ar = round(calc_ar(res['stg_left'], res['stg_right']), 2)
-#         mtg_ar = round(calc_ar(res['mtg_left'], res['mtg_right']), 2)
-#         itg_ar = round(calc_ar(res['itg_left'], res['itg_right']), 2)
-#         ars = [hem_ar, ba_ar, stg_ar, mtg_ar, itg_ar]
-#     elif task == 'wordgen':
-#         rois = ['whole brain', "broca's area", "superior frontal gyrus"]
-#         masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lsfg_mask, rsfg_mask]
-#         for mask in masks:
-#             roi = os.path.basename(mask).split('.')[0]
-#             vox[roi + '_vox'] = get_mask_vox(mask)
-#             res[roi] = round(get_roi_perc(img, mask, vox[roi + '_vox']))
-#         left_stats = [res['hem_left'], res['lba'], res['sfg_left']]
-#         right_stats = [res['hem_right'], res['rba'], res['sfg_right']]
-#         ba_ar = round(calc_ar(res['lba'], res['rba']), 2)
-#         hem_ar = round(calc_ar(res['hem_left'], res['hem_right']), 2)
-#         sfg_ar = round(calc_ar(res['sfg_left'], res['sfg_right']), 2)
-#         ars = [hem_ar, ba_ar, sfg_ar]
-#
-#     # Bar graph
-#     index = np.arange(len(left_stats))
-#     bar_width = 0.2
-#     opacity = 0.8
-#     axes = plt.gca()
-#     axes.set_ylim([0, 100])
-#
-#     plt.bar(index, left_stats, bar_width,
-#             alpha=opacity,
-#             color='#4f6bb0',
-#             label='Left')
-#     plt.bar(index + bar_width, right_stats, bar_width,
-#             alpha=opacity,
-#             color='#550824',
-#             label='Right')
-#
-#     plt.xlabel('ROI')
-#     plt.ylabel('% activated voxels in ROI')
-#     plt.title(task)
-#     plt.xticks(index + bar_width / 2, rois)
-#     plt.legend()
-#     plt.savefig(taskdir + task + '_bar.svg')
-#     plt.close()
-#
-#     # generate statistics table
-#     row = rois
-#     column = ['left %', 'right %', 'asymmetry ratio']
-#     data = np.array([left_stats, right_stats, ars]).transpose()
-#     df = pd.DataFrame(data, index=row, columns=column)
-#     df_string = df.to_html().replace('<table border="1" class="dataframe">',
-#                                      '<table class="table table-bordered" style="width:45%" >').replace(
-#         '<tr style="text-align: right;">', '<tr style="text-align: left;">')
-#
-#     with open(taskdir + task + "_table.txt", "w") as text_file:
-#         text_file.write(df_string)
-#
-#     # interactive viewer
-#     html_view = nilearn.plotting.view_img(nilearn.image.smooth_img(img, 8), threshold=5, bg_img='MNI152', vmax=10, title=task)
-#     html_view.save_as_html(taskdir + task + '_viewer.html')
 
 
 # Configure Jinja and ready the templates
@@ -418,14 +269,9 @@ def main():
     :return:
     """
 
-    # task_list = layout.get_tasks()
-    task_list = ['object', 'rhyme']
+    task_list = layout.get_tasks()
     if 'rest' in task_list:
         task_list.remove('rest')
-    gb = {}
-    viewers = {}
-    bars = {}
-    tables = {}
 
     # Content to be published
     title = "presurgical fMRI Report"
@@ -447,27 +293,32 @@ def main():
     ))
 
     for task in task_list:
-        taskdir = datadir + 'outputs/' + task + '/'
-        gb[task + '_gb'] = taskdir + task + "_gb.svg"
-        viewers[task + '_viewer'] = taskdir + task + "_viewer.html"
-        bars[task + '_bar'] = taskdir + task + "_bar.svg"
-        with open(taskdir + task + "_table.txt", "r") as text_file:
-            tables[task + '_table'] = text_file.read()
-
         (source_epi, input_functional, info) = setup(task)
         thresholded_img = model_fitting(source_epi, input_functional, info, task)
         if task == 'object':
-            rois = []
-            masks = []
-        #continue here
-        task_results = PostStats(thresholded_img, task, rois, masks)
+            rois = ['whole brain', "broca's area"]
+            masks = [lhem_mask, rhem_mask, lba_mask, rba_mask]
+        elif task == 'rhyme':
+            rois = ['whole brain', "broca's area", "wernicke's area"]
+            masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lwa_mask, rwa_mask]
+        elif task == 'scenemem':
+            rois = ['mTL', 'hippocampus', 'fusiform gyrus', 'parahippocampal gyrus']
+            masks = [lmtl_mask, rmtl_mask, lhc_mask, rhc_mask, lffg_mask, rffg_mask, lphg_mask, rphg_mask]
+        elif task == 'sentence':
+            rois = ['wb', "ba", "superior TG", "middle TG", "inferior TG"]
+            masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lstg_mask, rstg_mask, lmtg_mask, rmtg_mask, litg_mask, ritg_mask]
+        elif task == 'object':
+            rois = ['whole brain', "broca's area", "superior frontal gyrus"]
+            masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lsfg_mask, rsfg_mask]
+
+        post_stats = PostStats(thresholded_img, task, rois, masks)
         sections.append(task_section_template.render(
-            section_name="#ses-01_task-" + task + "_run-01",
+            section_name="ses-01_task-" + task + "_run-01",
             task_title=task,
-            gb_path=gb[task+'_gb'],
-            viewer_path=viewers[task+'_viewer'],
-            bar_path=bars[task+'_bar'],
-            table=tables[task+'_table']
+            gb_path=post_stats.create_glass_brain(),
+            viewer_path=post_stats.create_html_viewer(),
+            bar_path=post_stats.create_bar_plot(),
+            table=post_stats.generate_statistics_table()
         ))
 
     # Produce and write the report to file
