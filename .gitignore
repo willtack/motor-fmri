@@ -6,3 +6,5 @@ venv
 outputs
 bids_dataset
 stat_result.json
+.ipynb_checkpoints
+Write-up.ipynb

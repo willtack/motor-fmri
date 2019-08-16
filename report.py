@@ -26,43 +26,6 @@ from bids import BIDSLayout
 from nipype.interfaces.base import Bunch
 from jinja2 import FileSystemLoader, Environment
 
-fsl.FSLCommand.set_default_output_type('NIFTI_GZ')
-datadir = '/home/will/PycharmProjects/report_gear/'
-bidsdir = datadir + 'bids_dataset'
-
-# try:
-#     bidsdir = sys.argv[1]
-# except IOError:
-#     print("No input file specified.")
-#     sys.exit(1)
-
-layout = BIDSLayout(bidsdir)
-
-lba_mask = datadir + "masks/ba_left.nii.gz"
-rba_mask = datadir + "masks/ba_right.nii.gz"
-lstg_mask = datadir + "masks/stg_left.nii.gz"
-rstg_mask = datadir + "masks/stg_right.nii.gz"
-lmtg_mask = datadir + "masks/mtg_left.nii.gz"
-rmtg_mask = datadir + "masks/mtg_right.nii.gz"
-litg_mask = datadir + "masks/itg_left.nii.gz"
-ritg_mask = datadir + "masks/itg_right.nii.gz"
-lsfg_mask = datadir + "masks/sfg_left.nii.gz"
-rsfg_mask = datadir + "masks/sfg_right.nii.gz"
-lwa_mask = datadir + "masks/stg_post_left.nii.gz"
-rwa_mask = datadir + "masks/stg_post_right.nii.gz"
-lhem_mask = datadir + "masks/hem_left.nii.gz"
-rhem_mask = datadir + "masks/hem_right.nii.gz"
-
-mtl_mask = datadir + "masks/hpf_bin.nii.gz"
-lmtl_mask = datadir + "masks/hpf_left_bin.nii.gz"
-rmtl_mask = datadir + "masks/hpf_right_bin.nii.gz"
-lhc_mask = datadir + "masks/hippocampus_left_bin.nii.gz"
-rhc_mask = datadir + "masks/hippocampus_right_bin.nii.gz"
-lffg_mask = datadir + "masks/ffg_left_bin.nii.gz"
-rffg_mask = datadir + "masks/ffg_right_bin.nii.gz"
-lphg_mask = datadir + "masks/phg_left_bin.nii.gz"
-rphg_mask = datadir + "masks/phg_right_bin.nii.gz"
-
 
 def setup(taskname):
     events = pd.read_csv(os.path.join(bidsdir, "task-" + taskname + "_events.tsv"), sep="\t")
@@ -250,6 +213,44 @@ class PostStats:
         return viewer_file
 
 
+fsl.FSLCommand.set_default_output_type('NIFTI_GZ')
+datadir = '/home/will/PycharmProjects/report_gear/'
+bidsdir = datadir + 'bids_dataset'
+
+# try:
+#     bidsdir = sys.argv[1]
+# except IOError:
+#     print("No input file specified.")
+#     sys.exit(1)
+
+# get the layout object of the BIDS directory
+layout = BIDSLayout(bidsdir)
+
+lba_mask = datadir + "masks/ba_left.nii.gz"
+rba_mask = datadir + "masks/ba_right.nii.gz"
+lstg_mask = datadir + "masks/stg_left.nii.gz"
+rstg_mask = datadir + "masks/stg_right.nii.gz"
+lmtg_mask = datadir + "masks/mtg_left.nii.gz"
+rmtg_mask = datadir + "masks/mtg_right.nii.gz"
+litg_mask = datadir + "masks/itg_left.nii.gz"
+ritg_mask = datadir + "masks/itg_right.nii.gz"
+lsfg_mask = datadir + "masks/sfg_left.nii.gz"
+rsfg_mask = datadir + "masks/sfg_right.nii.gz"
+lwa_mask = datadir + "masks/stg_post_left.nii.gz"
+rwa_mask = datadir + "masks/stg_post_right.nii.gz"
+lhem_mask = datadir + "masks/hem_left.nii.gz"
+rhem_mask = datadir + "masks/hem_right.nii.gz"
+
+mtl_mask = datadir + "masks/hpf_bin.nii.gz"
+lmtl_mask = datadir + "masks/hpf_left_bin.nii.gz"
+rmtl_mask = datadir + "masks/hpf_right_bin.nii.gz"
+lhc_mask = datadir + "masks/hippocampus_left_bin.nii.gz"
+rhc_mask = datadir + "masks/hippocampus_right_bin.nii.gz"
+lffg_mask = datadir + "masks/ffg_left_bin.nii.gz"
+rffg_mask = datadir + "masks/ffg_right_bin.nii.gz"
+lphg_mask = datadir + "masks/phg_left_bin.nii.gz"
+rphg_mask = datadir + "masks/phg_right_bin.nii.gz"
+
 # Configure Jinja and ready the templates
 env = Environment(
     loader=FileSystemLoader(searchpath="templates")
@@ -278,6 +279,8 @@ def main():
 
     # Produce our section blocks
     sections = list()
+
+    # Add the first section, a summary list and legend
     sections.append(summary_section_template.render(
         subject_id=layout.get(return_type='id', target='subject')[0].strip("[']"),
         task_list=task_list,
@@ -288,10 +291,12 @@ def main():
         asym_ratio_eq=datadir + 'imgs/asym_ratio_equation.png'
     ))
 
+    # Add the navigation bar at the top
     sections.append(navbar_template.render(
         task_list=task_list
     ))
 
+    # Do the analysis for each task. Each task has a unique set of ROIs
     for task in task_list:
         (source_epi, input_functional, info) = setup(task)
         thresholded_img = model_fitting(source_epi, input_functional, info, task)
@@ -311,14 +316,15 @@ def main():
             rois = ['whole brain', "broca's area", "superior frontal gyrus"]
             masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lsfg_mask, rsfg_mask]
 
+        # create a PostStats object for the current task. Add elements to the section based on the object's methods
         post_stats = PostStats(thresholded_img, task, rois, masks)
         sections.append(task_section_template.render(
-            section_name="ses-01_task-" + task + "_run-01",
+            section_name="ses-01_task-" + task + "_run-01",  # the link that IDs this section for the nav bar
             task_title=task,
-            gb_path=post_stats.create_glass_brain(),
-            viewer_path=post_stats.create_html_viewer(),
-            bar_path=post_stats.create_bar_plot(),
-            table=post_stats.generate_statistics_table()
+            gb_path=post_stats.create_glass_brain(),  # glass brain
+            viewer_path=post_stats.create_html_viewer(),  # interactive statistical map viewer
+            bar_path=post_stats.create_bar_plot(),  # bar plot
+            table=post_stats.generate_statistics_table()  # statistics table
         ))
 
     # Produce and write the report to file
