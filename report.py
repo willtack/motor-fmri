@@ -14,6 +14,7 @@ from __future__ import division
 from __future__ import print_function
 
 import os
+import sys
 
 import matplotlib.pyplot as plt
 import nilearn.plotting
@@ -36,8 +37,7 @@ def setup(taskname):
                           onsets=[list(events[events.trial_type == 'stimulus'].onset)],
                           durations=[list(events[events.trial_type == 'stimulus'].duration)])]
 
-    prepped_img = os.path.join(bidsdir, "derivatives",
-                               "fmriprep", "sub-" + source_img.entities['subject'],
+    prepped_img = os.path.join(fmriprepdir, "sub-" + source_img.entities['subject'],
                                "ses-" + source_img.entities['session'], "func",
                                "sub-" + source_img.entities['subject'] + "_ses-" + source_img.entities[
                                    'session'] + "_task-" + taskname + "_run-01_space-MNI152NLin2009cAsym_desc"
@@ -46,7 +46,7 @@ def setup(taskname):
 
 
 def model_fitting(source_img, prepped_img, subject_info, task):
-    taskdir = datadir + 'outputs/' + task + '/'
+    taskdir = os.path.join(outputdir, task)
     if not os.path.exists(taskdir):
         os.mkdir(taskdir)
 
@@ -55,7 +55,7 @@ def model_fitting(source_img, prepped_img, subject_info, task):
     bet.inputs.in_file = prepped_img
     bet.inputs.frac = 0.7
     bet.inputs.functional = True
-    bet.inputs.out_file = taskdir + task + "_input_functional_bet.nii.gz"
+    bet.inputs.out_file = os.path.join(taskdir, task + "_input_functional_bet.nii.gz")
     bet_res = bet.run()
     bettedinput = bet_res.outputs.out_file
 
@@ -110,7 +110,7 @@ class PostStats:
     def __init__(self, img, task, rois, masks):
         self.img = img
         self.task = task
-        self.taskdir = datadir + 'outputs/' + task + '/'
+        self.taskdir = os.path.join(outputdir, self.task)
         self.rois = rois  # a list of strings used as labels in plot
         self.masks = masks  # masks to do statistics on
 
@@ -120,11 +120,11 @@ class PostStats:
         if self.task == 'scenemem':
             # masked_img = fsl.ImageMaths(in_file=img, mask_file=mtl_mask, out_file=taskdir + task + "_img_masked.nii.gz")
             nilearn.plotting.plot_glass_brain(nilearn.image.smooth_img(self.img, 8),
-                                              output_file=self.taskdir + self.task + "_gb.svg",
+                                              output_file=os.path.join(self.taskdir, self.task + "_gb.svg"),
                                               display_mode='lyrz', colorbar=True, plot_abs=False, threshold=5)
         else:
             nilearn.plotting.plot_glass_brain(nilearn.image.smooth_img(self.img, 8),
-                                              output_file=self.taskdir + self.task + "_gb.svg",
+                                              output_file=os.path.join(self.taskdir, self.task + "_gb.svg"),
                                               display_mode='lyrz', colorbar=True, plot_abs=False, threshold=3.5)
 
         out_file = self.taskdir + self.task + "_gb.svg"
@@ -215,13 +215,26 @@ class PostStats:
 
 fsl.FSLCommand.set_default_output_type('NIFTI_GZ')
 datadir = '/home/will/PycharmProjects/report_gear/'
-bidsdir = datadir + 'bids_dataset'
+#bidsdir = datadir + 'bids_dataset'
 
-# try:
-#     bidsdir = sys.argv[1]
-# except IOError:
-#     print("No input file specified.")
-#     sys.exit(1)
+try:
+    bidsdir = sys.argv[1]
+except IOError:
+    print("No bids directory specified.")
+    sys.exit(1)
+
+try:
+    fmriprepdir = sys.argv[2]
+except IOError:
+    print("No fmriprep directory specified.")
+    sys.exit(1)
+
+try:
+    outputdir = sys.argv[3]
+except IOError:
+    print("No output directory specified.")
+    sys.exit(1)
+
 
 # get the layout object of the BIDS directory
 layout = BIDSLayout(bidsdir)
@@ -271,6 +284,7 @@ def main():
     """
 
     task_list = layout.get_tasks()
+    task_list = ['object']
     if 'rest' in task_list:
         task_list.remove('rest')
 
@@ -328,7 +342,7 @@ def main():
         ))
 
     # Produce and write the report to file
-    with open("outputs/report.html", "w") as f:
+    with open(os.path.join(outputdir, "report.html"), "w") as f:
         f.write(base_template.render(
             title=title,
             sections=sections
