@@ -215,7 +215,6 @@ class PostStats:
 
 fsl.FSLCommand.set_default_output_type('NIFTI_GZ')
 datadir = '/home/will/PycharmProjects/report_gear/'
-#bidsdir = datadir + 'bids_dataset'
 
 try:
     bidsdir = sys.argv[1]
@@ -284,7 +283,6 @@ def main():
     """
 
     task_list = layout.get_tasks()
-    task_list = ['object']
     if 'rest' in task_list:
         task_list.remove('rest')
 
