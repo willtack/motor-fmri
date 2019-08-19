@@ -191,10 +191,10 @@ class PostStats:
         plt.title(self.task)
         plt.xticks(index + bar_width / 2, self.rois)
         plt.legend()
-        plt.savefig(self.taskdir + self.task + '_bar.svg')
+        plt.savefig(os.path.join(self.taskdir, self.task + "_bar.svg"))
         plt.close()
 
-        plot_file = self.taskdir + self.task + '_bar.svg'
+        plot_file = os.path.join(self.taskdir, self.task + "_bar.svg")
         return plot_file
 
     def generate_statistics_table(self):
@@ -208,8 +208,8 @@ class PostStats:
     def create_html_viewer(self):
         html_view = nilearn.plotting.view_img(nilearn.image.smooth_img(self.img, 8), threshold=5, bg_img='MNI152', vmax=10,
                                               title=self.task)
-        html_view.save_as_html(self.taskdir + self.task + '_viewer.html')
-        viewer_file = self.taskdir + self.task + '_viewer.html'
+        html_view.save_as_html(os.path.join(self.taskdir, self.task + "_viewer.html"))
+        viewer_file = os.path.join(self.taskdir, self.task + "viewer.html")
         return viewer_file
 
 

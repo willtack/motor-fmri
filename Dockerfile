@@ -13,7 +13,9 @@ COPY manifest.json ${FLYWHEEL}/manifest.json
 ENTRYPOINT ["/flywheel/v0/run.sh"]
 
 RUN apt-get -y update
-RUN apt-get install -y zip
+RUN apt-get install -y --no-install-recommends \
+                    fsl-core=5.0.9-5~nd16.04+1 \
+                    zip
 
 RUN pip install flywheel-sdk \
     && pip install nipype \
@@ -23,15 +25,17 @@ RUN pip install flywheel-sdk \
     && pip install bids \
     && pip install numpy \
     && pip install sklearn \
-    && pip install fw-heudiconv
+    && pip install fw-heudiconv \
+    && pip install jinja2
 
 # Copy over python scripts
 COPY report.py ${FLYWHEEL}/report.py
 COPY run.sh ${FLYWHEEL}/run.sh
 COPY imgs/ $FLYWHEEL}/imgs/
 COPY masks/ ${FLYWHEEL}/masks/
-COPY create_archive_fw_heudiconv.py ${FLYWHEEL}/create_archive_fw_heudiconv.py
 COPY bids_dataset/ ${FLYWHEEL}/bids_dataset/
+COPY outputs/ ${FLYWHEEL}/outputs/
+COPY templates/ ${FLYWHEEL}/templates/
 RUN chmod +x ${FLYWHEEL}/*
 
 #  ENV preservation for Flywheel Engine
