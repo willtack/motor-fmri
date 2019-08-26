@@ -12,7 +12,7 @@ mkdir -p ${OUTPUT_DIR}
 BIDS_DIR=${INPUT_DIR}/bids_dataset
 CONTAINER='[flywheel/presurgicalreport]'
 cp ${FLYWHEEL_BASE}/fmriprep_dir ${INPUT_DIR}/bids_dataset/derivatives/fmriprep/fmriprep_dir
-    
+
 
 # CREATE A BIDS FORMATTED DIRECTORY
 #   Use fw-heudiconv to accomplish this task
