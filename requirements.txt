@@ -1,7 +1,11 @@
 matplotlib
 nilearn
 nipype
+scikit-learn
+scikit-image
 numpy
 pandas
-bids
+pybids
 jinja2
+flywheel-sdk
+fw-heudiconv
