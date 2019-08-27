@@ -9,14 +9,14 @@ INPUT_DIR=${FLYWHEEL_BASE}/input
 mkdir -p ${INPUT_DIR}
 OUTPUT_DIR=${FLYWHEEL_BASE}/output
 mkdir -p ${OUTPUT_DIR}
-BIDS_DIR=${INPUT_DIR}/bids_dataset
+#BIDS_DIR=${INPUT_DIR}/bids_dataset
 CONTAINER='[flywheel/presurgicalreport]'
-cp ${FLYWHEEL_BASE}/fmriprep_dir ${INPUT_DIR}/bids_dataset/derivatives/fmriprep/fmriprep_dir
+#cp ${FLYWHEEL_BASE}/fmriprep_dir ${INPUT_DIR}/bids_dataset/derivatives/fmriprep/fmriprep_dir
 
 
 # CREATE A BIDS FORMATTED DIRECTORY
 #   Use fw-heudiconv to accomplish this task
-/usr/local/miniconda/bin/python ${FLYWHEEL_BASE}/create_archive_fw_heudiconv.py
+/opt/miniconda-latest/bin/python3 ${FLYWHEEL_BASE}/create_archive_fw_heudiconv.py
 if [[ $? != 0 ]]; then
   echo "$CONTAINER  Problem creating archive! Exiting (1)"
   exit 1
