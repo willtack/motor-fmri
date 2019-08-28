@@ -13,7 +13,7 @@ mkdir -p ${OUTPUT_DIR}
 CONTAINER='[flywheel/presurgicalreport]'
 #cp ${FLYWHEEL_BASE}/fmriprep_dir ${INPUT_DIR}/bids_dataset/derivatives/fmriprep/fmriprep_dir
 
-
+echo "test"
 # CREATE A BIDS FORMATTED DIRECTORY
 #   Use fw-heudiconv to accomplish this task
 /opt/miniconda-latest/bin/python3 ${FLYWHEEL_BASE}/create_archive_fw_heudiconv.py
@@ -34,4 +34,4 @@ fi
 # Show the contents of the BIDS directory
 ls -R ${BIDS_DIR}
 
-python report.py /flywheel/v0/bids_dataset /flywheel/v0/bids_dataset/derivatives/fmriprep/ /flywheel/v0/outputs
+/opt/miniconda-latest/bin/python3 report.py /flywheel/v0/bids_dataset /flywheel/v0/bids_dataset/derivatives/fmriprep/ /flywheel/v0/outputs
