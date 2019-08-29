@@ -1,25 +1,32 @@
 {
-	"name": "y",
-	"label": "y",
+	"name": "presurgical-report",
+	"label": "Presurgical Report Generator",
 	"description": "Generates a report from an fmri scan of an epilepsy patient",
-	"version": "0",
-	"inputs": {
-		"fmriprep_dir": {
-			"base": "file",
-			"description": "Full path to directory containing fmriprep results"
-		}
-	},
-	"config": {},
-	"command": "./report.py",
-	"author": "Will Tackett",
-	"maintainer": "Will Tackett",
-	"license": "BSD-3-Clause",
-	"source": "none",
-	"url": "none",
+	"author": "Brain Science Center, University of Pennsylvania",
+	"maintainer": "Will Tackett <william.tackett@pennmedicine.upenn.edu>",
+	"source": "https://github.com/willtack/presurgical-report",
+	"url": "https://github.com/willtack/presurgical-report",
+	"version": "3.1.1",
 	"custom": {
-		"gear-builder": {
-			"category": "analysis",
-			"image": "report"
-		}
-	}
+      "gear-builder": {
+        "category": "analysis",
+        "image": "willtack/report"
+    },
+    "flywheel":{"suite": "BrainScienceCenter"}
+	},
+	"license": "BSD-3-Clause",
+	"inputs": {
+		"api_key": {
+      		"base": "api-key"
+		},
+		"fprep": {
+			"description": "Full path to directory containing fmriprep results",
+			"base": "file"
+		},
+		"bidsdir": {
+			"description": "Full path to directory containing BIDS data structure",
+			"base": "file"
+		}},
+		"config": {},
+		"command": "./run.sh"
 }
