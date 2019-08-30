@@ -214,7 +214,8 @@ class PostStats:
 
 
 fsl.FSLCommand.set_default_output_type('NIFTI_GZ')
-datadir = '/home/will/PycharmProjects/report_gear/'
+# datadir = '/home/will/PycharmProjects/report_gear/
+datadir = os.getcwd()
 
 try:
     bidsdir = sys.argv[1]

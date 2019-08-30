@@ -1,4 +1,4 @@
-FROM ubuntu:latest
+FROM ubuntu:16.04
 MAINTAINER Will Tackett <william.tackett@pennmedicine.upenn.edu>
 
 # Pre-cache neurodebian key
@@ -32,42 +32,65 @@ RUN apt-get update && \
 
 
 # Installing Neurodebian packages (FSL, AFNI, git)
-RUN curl -sSL "http://neuro.debian.net/lists/$( lsb_release -c | cut -f2 ).us-ca.full" >> /etc/apt/sources.list.d/neurodebian.sources.list && \
-    apt-key add /usr/local/etc/neurodebian.gpg && \
-    (apt-key adv --refresh-keys --keyserver hkp://ha.pool.sks-keyservers.net 0xA5D32F012649A5A9 || true)
+#RUN curl -sSL "http://neuro.debian.net/lists/$( lsb_release -c | cut -f2 ).us-ca.full" >> /etc/apt/sources.list.d/neurodebian.sources.list && \
+#    apt-key add /usr/local/etc/neurodebian.gpg && \
+#    (apt-key adv --refresh-keys --keyserver hkp://ha.pool.sks-keyservers.net 0xA5D32F012649A5A9 || true)
+
+ENV FSLDIR="/opt/fsl-5.0.11" \
+  PATH="/opt/fsl-5.0.11/bin:$PATH"
+RUN apt-get update -qq \
+  && apt-get install -y -q --no-install-recommends \
+         bc \
+         dc \
+         file \
+         libfontconfig1 \
+         libfreetype6 \
+         libgl1-mesa-dev \
+         libglu1-mesa-dev \
+         libgomp1 \
+         libice6 \
+         libxcursor1 \
+         libxft2 \
+         libxinerama1 \
+         libxrandr2 \
+         libxrender1 \
+         libxt6 \
+         wget \
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
+  && echo "Downloading FSL ..." \
+  && mkdir -p /opt/fsl-5.0.11 \
+  && curl -fsSL --retry 5 https://fsl.fmrib.ox.ac.uk/fsldownloads/fsl-5.0.11-centos6_64.tar.gz \
+  | tar -xz -C /opt/fsl-5.0.11 --strip-components 1 \
+  && echo "Installing FSL conda environment ..." \
+  && bash /opt/fsl-5.0.11/etc/fslconf/fslpython_install.sh -f /opt/fsl-5.0.11
 
 # Installing precomputed python packages
-ENV CONDA_DIR="/opt/miniconda-latest" \
-    PATH="/opt/miniconda-latest/bin:$PATH"
-RUN export PATH="/opt/miniconda-latest/bin:$PATH" \
-    && echo "Downloading Miniconda installer ..." \
-    && conda_installer="/tmp/miniconda.sh" \
-    && curl -fsSL --retry 5 -o "$conda_installer" https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh \
-    && bash "$conda_installer" -b -p /opt/miniconda-latest \
-    && rm -f "$conda_installer" \
-    && conda update -yq -nbase conda \
-    && conda config --system --prepend channels conda-forge \
-    && conda config --system --set auto_update_conda false \
-    && conda config --system --set show_channel_urls true \
-    && sync && conda clean -tipsy && sync \
-    && conda install -y python=3.7.1 \
-                         pip=19.1 \
-                         mkl=2018.0.3 \
-                         mkl-service \
-                         numpy=1.15.4 \
-                         scipy=1.1.0 \
-                         scikit-learn=0.19.1 \
-                         matplotlib=2.2.2 \
-                         pandas=0.23.4 \
-                         libxml2=2.9.8 \
-                         libxslt=1.1.32 \
-                         graphviz=2.40.1 \
-                         traits=4.6.0 \
-                         zlib; sync && \
-        chmod -R a+rX /usr/local/miniconda; sync && \
-        chmod +x /usr/local/miniconda/bin/*; sync && \
-        conda build purge-all; sync && \
-        conda clean -tipsy && sync
+# Installing and setting up miniconda
+RUN curl -sSLO https://repo.continuum.io/miniconda/Miniconda3-4.5.12-Linux-x86_64.sh && \
+    bash Miniconda3-4.5.12-Linux-x86_64.sh -b -p /usr/local/miniconda && \
+    rm Miniconda3-4.5.12-Linux-x86_64.sh
+
+ENV PATH=/usr/local/miniconda/bin:$PATH \
+    LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
+    PYTHONNOUSERSITE=1
+
+RUN conda install -y mkl=2019.1 mkl-service;  sync &&\
+    conda install -y numpy=1.15.4 \
+                     scipy=1.1.0 \
+                     scikit-learn=0.19.1 \
+                     matplotlib=2.2.2 \
+                     pandas=0.23.4 \
+                     libxml2=2.9.8 \
+                     libxslt=1.1.32 \
+                     graphviz=2.40.1 \
+                     traits=4.6.0 \
+                     zlib; sync && \
+    chmod -R a+rX /usr/local/miniconda; sync && \
+    chmod +x /usr/local/miniconda/bin/*; sync && \
+    conda build purge-all; sync && \
+    conda clean -tipsy && sync
 
 RUN pip install flywheel-sdk pandas
 RUN pip install --no-cache fw-heudiconv \
