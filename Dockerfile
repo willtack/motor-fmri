@@ -36,8 +36,7 @@ RUN apt-get update && \
 #    apt-key add /usr/local/etc/neurodebian.gpg && \
 #    (apt-key adv --refresh-keys --keyserver hkp://ha.pool.sks-keyservers.net 0xA5D32F012649A5A9 || true)
 
-ENV FSLDIR="/usr/share/fsl" \
-  PATH="${FSLDIR}/bin:$PATH"
+ENV FSLDIR="/usr/share/fsl"
 RUN apt-get update -qq \
   && apt-get install -y -q --no-install-recommends \
          bc \
@@ -64,6 +63,8 @@ RUN apt-get update -qq \
   | tar -xz -C /usr/share/fsl --strip-components 1 \
   && echo "Installing FSL conda environment ..." \
   && bash /usr/share/fsl/etc/fslconf/fslpython_install.sh -f /usr/share/fsl
+
+ENV PATH="${FSLDIR}/bin:$PATH"
 
 # Installing precomputed python packages
 # Installing and setting up miniconda
