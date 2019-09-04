@@ -1,9 +1,6 @@
 FROM ubuntu:16.04
 MAINTAINER Will Tackett <william.tackett@pennmedicine.upenn.edu>
 
-# Pre-cache neurodebian key
-COPY neurodebian.gpg /usr/local/etc/neurodebian.gpg
-
 # Make directory for flywheel spec (v0)
 ENV FLYWHEEL /flywheel/v0
 RUN mkdir -p ${FLYWHEEL}
