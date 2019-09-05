@@ -9,12 +9,11 @@ INPUT_DIR=${FLYWHEEL_BASE}/input
 mkdir -p ${INPUT_DIR}
 OUTPUT_DIR=${FLYWHEEL_BASE}/output
 mkdir -p ${OUTPUT_DIR}
+RESULTS_DIR=${FLYWHEEL_BASE}/report_results
+mkdir -p ${RESULTS_DIR}
 BIDS_DIR=${INPUT_DIR}/bidsdir
 FPREP_DIR=${INPUT_DIR}/fprep
 CONTAINER='[flywheel/presurgicalreport]'
-
-FSLDIR="/usr/share/fsl"
-
 #cp ${FLYWHEEL_BASE}/fmriprep_dir ${INPUT_DIR}/bids_dataset/derivatives/fmriprep/fmriprep_dir
 
 # CREATE A BIDS FORMATTED DIRECTORY
@@ -37,4 +36,8 @@ fi
 # Show the contents of the BIDS directory
 ls -R ${BIDS_DIR}
 
-/usr/local/miniconda/bin/python3 report.py ${BIDS_DIR}/bids_dataset ${FPREP_DIR}/fmriprep ${OUTPUT_DIR}
+/usr/local/miniconda/bin/python3 report.py ${BIDS_DIR}/bids_dataset ${FPREP_DIR}/fmriprep ${RESULTS_DIR}
+
+zip ${RESULTS_DIR}
+
+cp ${RESULTS_DIR} ${OUTPUT_DIR}/
