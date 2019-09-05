@@ -12,6 +12,9 @@ mkdir -p ${OUTPUT_DIR}
 BIDS_DIR=${INPUT_DIR}/bidsdir
 FPREP_DIR=${INPUT_DIR}/fprep
 CONTAINER='[flywheel/presurgicalreport]'
+
+FSLDIR="/usr/share/fsl"
+
 #cp ${FLYWHEEL_BASE}/fmriprep_dir ${INPUT_DIR}/bids_dataset/derivatives/fmriprep/fmriprep_dir
 
 # CREATE A BIDS FORMATTED DIRECTORY

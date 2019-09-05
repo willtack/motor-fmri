@@ -8,16 +8,18 @@
 	"url": "https://github.com/willtack/presurgical-report",
 	"version": "3.1.1",
 	"custom": {
-      "gear-builder": {
-        "category": "analysis",
-        "image": "willtack/report"
-    },
-    "flywheel":{"suite": "BrainScienceCenter"}
+		"gear-builder": {
+			"category": "analysis",
+			"image": "willtack/report"
+		},
+		"flywheel": {
+			"suite": "BrainScienceCenter"
+		}
 	},
 	"license": "BSD-3-Clause",
 	"inputs": {
 		"api_key": {
-      		"base": "api-key"
+			"base": "api-key"
 		},
 		"fprep": {
 			"description": "Full path to directory containing fmriprep results",
@@ -26,7 +28,19 @@
 		"bidsdir": {
 			"description": "Full path to directory containing BIDS data structure",
 			"base": "file"
-		}},
-		"config": {},
-		"command": "./run.sh"
+		}
+	},
+	"config": {},
+	"environment": {
+		"FLYWHEEL": "/flywheel/v0",
+		"FSLDIR": "/usr/share/fsl",
+		"FSLMULTIFILEQUIT": "TRUE",
+		"FSLOUTPUTTYPE": "NIFTI_GZ",
+		"LANG": "C.UTF-8",
+		"LD_LIBRARY_PATH": "/usr/share/fsl/6.0/lib",
+		"PATH": "/usr/local/miniconda/bin:/usr/share/fsl/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+		"PYTHON_PIP_VERSION": "19.2.2",
+		"PYTHON_VERSION": "3.7.4"
+	},
+	"command": "/flywheel/v0/run.sh"
 }
