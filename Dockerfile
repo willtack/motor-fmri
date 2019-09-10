@@ -75,17 +75,16 @@ ENV PATH=/usr/local/miniconda/bin:$PATH \
     LC_ALL=C.UTF-8 \
     PYTHONNOUSERSITE=1
 
-RUN conda install -y mkl=2019.1 mkl-service;  sync &&\
+RUN conda install -y mkl=2019.4 mkl-service;  sync &&\
     conda install -y numpy=1.15.4 \
-                     scipy=1.1.0 \
+                     scipy=1.3.0 \
                      scikit-learn=0.19.1 \
                      matplotlib=2.2.2 \
-                     pandas=0.23.4 \
-                     libxml2=2.9.8 \
-                     libxslt=1.1.32 \
+                     pandas=0.25.0 \
+                     libxml2=2.9.9 \
                      graphviz=2.40.1 \
-                     traits=4.6.0 \
                      zlib; sync && \
+    conda install -c conda-forge traits; sync && \
     chmod -R a+rX /usr/local/miniconda; sync && \
     chmod +x /usr/local/miniconda/bin/*; sync && \
     conda build purge-all; sync && \
@@ -108,3 +107,6 @@ RUN env -u HOSTNAME -u PWD | \
   awk -F = '{ print "export " $1 "=\"" $2 "\"" }' > ${FLYWHEEL}/docker-env.sh
 
 WORKDIR /flywheel/v0
+
+RUN conda install matplotlib
+RUN conda install scikit-learn
