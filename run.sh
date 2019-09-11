@@ -38,6 +38,6 @@ ls -R ${BIDS_DIR}
 
 /usr/local/miniconda/bin/python3 report.py ${BIDS_DIR}/bids_dataset ${FPREP_DIR}/fmriprep ${RESULTS_DIR}
 
-zip ${RESULTS_DIR}
+zip -r report_results.zip report_results
 
-cp ${RESULTS_DIR} ${OUTPUT_DIR}/
+cp report_results.zip ${OUTPUT_DIR}/
