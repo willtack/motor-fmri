@@ -11,6 +11,7 @@ ENTRYPOINT ["/flywheel/v0/run.sh"]
 
 # Prepare environment
 RUN apt-get update && \
+    apt-get upgrade -y && \
     apt-get install -y --no-install-recommends \
                     curl \
                     bzip2 \
@@ -22,6 +23,7 @@ RUN apt-get update && \
                     libtool \
                     pkg-config \
                     zip \
+                    unzip \
                     git && \
     curl -sL https://deb.nodesource.com/setup_10.x | bash - && \
     apt-get install -y --no-install-recommends \
@@ -105,6 +107,10 @@ RUN chmod +x ${FLYWHEEL}/*
 # ENV preservation for Flywheel Engine
 RUN env -u HOSTNAME -u PWD | \
   awk -F = '{ print "export " $1 "=\"" $2 "\"" }' > ${FLYWHEEL}/docker-env.sh
+
+RUN apt-get update -y
+RUN apt-get upgrade -y
+RUN apt-get install -y unzip
 
 WORKDIR /flywheel/v0
 
