@@ -11,18 +11,15 @@ OUTPUT_DIR=${FLYWHEEL_BASE}/output
 mkdir -p ${OUTPUT_DIR}
 RESULTS_DIR=${FLYWHEEL_BASE}/report_results
 mkdir -p ${RESULTS_DIR}
-BIDS_DIR=${INPUT_DIR}/bidsdir
-FPREP_DIR=${INPUT_DIR}/fprep
 CONTAINER='[flywheel/presurgicalreport]'
-#cp ${FLYWHEEL_BASE}/fmriprep_dir ${INPUT_DIR}/bids_dataset/derivatives/fmriprep/fmriprep_dir
 
 # CREATE A BIDS FORMATTED DIRECTORY
 #   Use fw-heudiconv to accomplish this task
-# /opt/miniconda-latest/bin/python3 ${FLYWHEEL_BASE}/create_archive_fw_heudiconv.py
-# if [[ $? != 0 ]]; then
-#   echo "$CONTAINER  Problem creating archive! Exiting (1)"
-#   exit 1
-# fi
+/usr/local/miniconda/bin/python3 ${FLYWHEEL_BASE}/create_archive_fw_heudiconv.py
+ if [[ $? != 0 ]]; then
+   echo "$CONTAINER  Problem creating archive! Exiting (1)"
+   exit 1
+ fi
 
 # VALIDATE INPUT DATA
 # Check if the input directory is not empty
@@ -34,10 +31,21 @@ else
 fi
 
 # Show the contents of the BIDS directory
-ls -R ${BIDS_DIR}
+ls -R "${BIDS_DIR}"
 
-/usr/local/miniconda/bin/python3 report.py ${BIDS_DIR}/bids_dataset ${FPREP_DIR}/fmriprep ${RESULTS_DIR}
+# Position fmriprepdir contents
+unzip ${INPUT_DIR}/fmriprepdir -d ${INPUT_DIR}
+cd ${INPUT_DIR} || exit
+rm -rf ${INPUT_DIR}/fmriprepdir
+find . -maxdepth 2 -type d | grep -E -v bids | grep -E -v fmriprepdir | grep -E fmriprep
+cd ${FLYWHEEL_BASE} || exit
 
+# Copy event files
+cp ${FLYWHEEL_BASE}/events/* ${FLYWHEEL_BASE}/input/bids_dataset/
+
+# Run script
+/usr/local/miniconda/bin/python3 report.py ${INPUT_DIR}/bids_dataset ${INPUT_DIR}/fmriprepdir ${RESULTS_DIR}
+
+# Position results directory as zip file in /flywheel/v0/output
 zip -r report_results.zip report_results
-
 cp report_results.zip ${OUTPUT_DIR}/
