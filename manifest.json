@@ -6,11 +6,11 @@
 	"maintainer": "Will Tackett <william.tackett@pennmedicine.upenn.edu>",
 	"source": "https://github.com/willtack/presurgical-report",
 	"url": "https://github.com/willtack/presurgical-report",
-	"version": "0.0.1",
+	"version": "0.0.3",
 	"custom": {
 		"gear-builder": {
 			"category": "analysis",
-			"image": "willtack/report:0.0.2"
+			"image": "willtack/report:0.0.3"
 		},
 		"flywheel": {
 			"suite": "BrainScienceCenter"
