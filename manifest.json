@@ -6,11 +6,11 @@
 	"maintainer": "Will Tackett <william.tackett@pennmedicine.upenn.edu>",
 	"source": "https://github.com/willtack/presurgical-report",
 	"url": "https://github.com/willtack/presurgical-report",
-	"version": "3.1.1",
+	"version": "0.0.1",
 	"custom": {
 		"gear-builder": {
 			"category": "analysis",
-			"image": "willtack/report"
+			"image": "willtack/report:0.0.2"
 		},
 		"flywheel": {
 			"suite": "BrainScienceCenter"
@@ -21,12 +21,8 @@
 		"api_key": {
 			"base": "api-key"
 		},
-		"fprep": {
+		"fmriprepdir": {
 			"description": "Full path to directory containing fmriprep results",
-			"base": "file"
-		},
-		"bidsdir": {
-			"description": "Full path to directory containing BIDS data structure",
 			"base": "file"
 		}
 	},
