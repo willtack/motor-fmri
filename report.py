@@ -104,13 +104,7 @@ def model_fitting(source_img, prepped_img, subject_info, task):
         interface=fsl.FILMGLS(smooth_autocorr=True, mask_size=5),
         name='modelestimate',
         iterfield=['design_file', 'in_file', 'tcon_file'])
-    conestimate = pe.MapNode(
-        interface=fsl.ContrastMgr(),
-        name='conestimate',
-        iterfield=[
-            'tcon_file', 'param_estimates', 'sigmasquareds',
-            'corrections', 'dof_file'
-        ])
+
     merge_contrasts = pe.MapNode(
         interface=util.Merge(2), name='merge_contrasts', iterfield=['in1'])
     ztopval = pe.MapNode(
@@ -239,7 +233,7 @@ class PostStats:
         mask_vox = list(mask_run.outputs.out_stat)
         return mask_vox[0]
 
-    def get_roi_perc(self, img, msk, mask_vox):
+    def get_roi_perc(self, msk, mask_vox):
         roi_stat = fsl.ImageStats(in_file=self.img, op_string='-k ' + msk + ' -V')
         print(roi_stat.cmdline)
         stat_run = roi_stat.run()
@@ -385,8 +379,8 @@ def main():
     Render a template and write it to file.
     :return:
     """
-    task_list = ['rhyme']
-    # task_list = layout.get_tasks()
+
+    task_list = layout.get_tasks()
     if 'rest' in task_list:
         task_list.remove('rest')
 
