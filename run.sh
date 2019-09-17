@@ -49,6 +49,12 @@ cp ${FLYWHEEL_BASE}/events/* ${INPUT_DIR}/bids_dataset/
 # Run script
 /usr/local/miniconda/bin/python3 report.py "${BIDS_DIR}" "${FMRIPREP_DIR}" "${RESULTS_DIR}"
 
+# Copy report to output directory
+cp ${RESULTS_DIR}/report.html ${OUTPUT_DIR}/
+
 # Position results directory as zip file in /flywheel/v0/output
 zip -r report_results.zip report_results
 mv report_results.zip ${OUTPUT_DIR}/
+
+# Remove report_results directory from container
+rm -rf ${RESULTS_DIR}
