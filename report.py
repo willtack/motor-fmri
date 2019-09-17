@@ -99,12 +99,10 @@ def model_fitting(source_img, prepped_img, subject_info, task):
         interface=fsl.FEATModel(),
         name='modelgen',
         iterfield=['fsf_file', 'ev_files'])
-
     modelestimate = pe.MapNode(
         interface=fsl.FILMGLS(smooth_autocorr=True, mask_size=5),
         name='modelestimate',
         iterfield=['design_file', 'in_file', 'tcon_file'])
-
     merge_contrasts = pe.MapNode(
         interface=util.Merge(2), name='merge_contrasts', iterfield=['in1'])
     ztopval = pe.MapNode(
@@ -217,14 +215,14 @@ class PostStats:
         if self.task == 'scenemem':
             # masked_img = fsl.ImageMaths(in_file=img, mask_file=mtl_mask, out_file=taskdir + task + "_img_masked.nii.gz")
             nilearn.plotting.plot_glass_brain(nilearn.image.smooth_img(self.img, 8),
-                                              output_file=os.path.join(self.taskdir, self.task + "_gb.svg"),
+                                              output_file=os.path.join(datadir, self.task + "_gb.svg"),
                                               display_mode='lyrz', colorbar=True, plot_abs=False, threshold=5)
         else:
             nilearn.plotting.plot_glass_brain(nilearn.image.smooth_img(self.img, 8),
-                                              output_file=os.path.join(self.taskdir, self.task + "_gb.svg"),
+                                              output_file=os.path.join(datadir, self.task + "_gb.svg"),
                                               display_mode='lyrz', colorbar=True, plot_abs=False, threshold=3.5)
 
-        out_file = self.taskdir + self.task + "_gb.svg"
+        out_file = os.path.join(datadir, self.task, "_gb.svg")
         return out_file
 
     def get_mask_vox(self, msk):
@@ -242,7 +240,10 @@ class PostStats:
         return perc
 
     def calc_ar(self, left, right):
-        return (left - right) / (left + right)
+        if not (left + right) > 0:
+            return 0
+        else:
+            return (left - right) / (left + right)
 
     def calc_stats(self):
         masks = self.masks
@@ -288,10 +289,10 @@ class PostStats:
         plt.title(self.task)
         plt.xticks(index + bar_width / 2, self.rois)
         plt.legend()
-        plt.savefig(os.path.join(self.taskdir, self.task + "_bar.svg"))
+        plt.savefig(os.path.join(datadir, self.task + "_bar.svg"))
         plt.close()
 
-        plot_file = os.path.join(self.taskdir, self.task + "_bar.svg")
+        plot_file = os.path.join(datadir, self.task + "_bar.svg")
         return plot_file
 
     def generate_statistics_table(self):
@@ -305,14 +306,13 @@ class PostStats:
     def create_html_viewer(self):
         html_view = nilearn.plotting.view_img(nilearn.image.smooth_img(self.img, 6), threshold=3, bg_img='MNI152', vmax=10,
                                               title=self.task)
-        html_view.save_as_html(os.path.join(self.taskdir, self.task + "_viewer.html"))
-        viewer_file = os.path.join(self.taskdir, self.task + "_viewer.html")
+        html_view.save_as_html(os.path.join(datadir, self.task + "_viewer.html"))
+        viewer_file = os.path.join(datadir, self.task + "_viewer.html")
         return viewer_file
 
 
 fsl.FSLCommand.set_default_output_type('NIFTI_GZ')
-# datadir = '/home/will/PycharmProjects/report_gear/
-datadir = os.getcwd() + '/'
+datadir = os.getcwd()
 
 try:
     bidsdir = sys.argv[1]
