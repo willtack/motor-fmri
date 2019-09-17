@@ -336,30 +336,31 @@ except IOError:
 # get the layout object of the BIDS directory
 layout = BIDSLayout(bidsdir)
 
-lba_mask = datadir + "masks/ba_left.nii.gz"
-rba_mask = datadir + "masks/ba_right.nii.gz"
-lstg_mask = datadir + "masks/stg_left.nii.gz"
-rstg_mask = datadir + "masks/stg_right.nii.gz"
-lmtg_mask = datadir + "masks/mtg_left.nii.gz"
-rmtg_mask = datadir + "masks/mtg_right.nii.gz"
-litg_mask = datadir + "masks/itg_left.nii.gz"
-ritg_mask = datadir + "masks/itg_right.nii.gz"
-lsfg_mask = datadir + "masks/sfg_left.nii.gz"
-rsfg_mask = datadir + "masks/sfg_right.nii.gz"
-lwa_mask = datadir + "masks/stg_post_left.nii.gz"
-rwa_mask = datadir + "masks/stg_post_right.nii.gz"
-lhem_mask = datadir + "masks/hem_left.nii.gz"
-rhem_mask = datadir + "masks/hem_right.nii.gz"
+lba_mask = os.path.join(datadir, "masks", "ba_left.nii.gz")
+rba_mask = os.path.join(datadir, "masks", "ba_right.nii.gz")
+lstg_mask = os.path.join(datadir, "masks", "stg_left.nii.gz")
+rstg_mask = os.path.join(datadir, "masks", "stg_right.nii.gz")
+lmtg_mask = os.path.join(datadir, "masks", "mtg_left.nii.gz")
+rmtg_mask = os.path.join(datadir, "masks", "mtg_right.nii.gz")
+litg_mask = os.path.join(datadir, "masks", "itg_left.nii.gz")
+ritg_mask = os.path.join(datadir, "masks", "itg_right.nii.gz")
+lsfg_mask = os.path.join(datadir, "masks", "sfg_left.nii.gz")
+rsfg_mask = os.path.join(datadir, "masks", "sfg_right.nii.gz")
+lwa_mask = os.path.join(datadir, "masks", "stg_post_left.nii.gz")
+rwa_mask = os.path.join(datadir, "masks", "sfg_post_right.nii.gz")
+lhem_mask = os.path.join(datadir, "masks", "hem_left.nii.gz")
+rhem_mask = os.path.join(datadir, "masks", "hem_right.nii.gz")
 
-mtl_mask = datadir + "masks/hpf_bin.nii.gz"
-lmtl_mask = datadir + "masks/hpf_left_bin.nii.gz"
-rmtl_mask = datadir + "masks/hpf_right_bin.nii.gz"
-lhc_mask = datadir + "masks/hippocampus_left_bin.nii.gz"
-rhc_mask = datadir + "masks/hippocampus_right_bin.nii.gz"
-lffg_mask = datadir + "masks/ffg_left_bin.nii.gz"
-rffg_mask = datadir + "masks/ffg_right_bin.nii.gz"
-lphg_mask = datadir + "masks/phg_left_bin.nii.gz"
-rphg_mask = datadir + "masks/phg_right_bin.nii.gz"
+mtl_mask = os.path.join(datadir, "masks", "hpf_bin.nii.gz")
+lmtl_mask = os.path.join(datadir, "masks", "hpf_left_bin.nii.gz")
+rmtl_mask = os.path.join(datadir, "masks", "hpf_right_bin.nii.gz")
+lhc_mask = os.path.join(datadir, "masks", "hippocampus_left_bin.nii.gz")
+rhc_mask = os.path.join(datadir, "masks", "hippocampus_right_bin.nii.gz")
+lffg_mask = os.path.join(datadir, "masks", "ffg_left_bin.nii.gz")
+rffg_mask = os.path.join(datadir, "masks", "ffg_right_bin.nii.gz")
+lphg_mask = os.path.join(datadir, "masks", "phg_left_bin.nii.gz")
+rphg_mask = os.path.join(datadir, "masks", "phg_right_bin.nii.gz")
+
 
 # Configure Jinja and ready the templates
 env = Environment(
