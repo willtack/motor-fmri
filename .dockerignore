@@ -7,3 +7,4 @@ venv
 readme.md
 .git
 report_randomise.py
+Dockerfile_light

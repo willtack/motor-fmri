@@ -11,7 +11,6 @@ ENTRYPOINT ["/flywheel/v0/run.sh"]
 
 # Prepare environment
 RUN apt-get update && \
-    apt-get upgrade -y && \
     apt-get install -y --no-install-recommends \
                     curl \
                     bzip2 \
@@ -23,7 +22,6 @@ RUN apt-get update && \
                     libtool \
                     pkg-config \
                     zip \
-                    unzip \
                     git && \
     curl -sL https://deb.nodesource.com/setup_10.x | bash - && \
     apt-get install -y --no-install-recommends \

@@ -215,14 +215,14 @@ class PostStats:
         if self.task == 'scenemem':
             # masked_img = fsl.ImageMaths(in_file=img, mask_file=mtl_mask, out_file=taskdir + task + "_img_masked.nii.gz")
             nilearn.plotting.plot_glass_brain(nilearn.image.smooth_img(self.img, 8),
-                                              output_file=os.path.join(datadir, self.task + "_gb.svg"),
+                                              output_file=os.path.join(outputdir, self.task, self.task + "_gb.svg"),
                                               display_mode='lyrz', colorbar=True, plot_abs=False, threshold=5)
         else:
             nilearn.plotting.plot_glass_brain(nilearn.image.smooth_img(self.img, 8),
-                                              output_file=os.path.join(datadir, self.task + "_gb.svg"),
+                                              output_file=os.path.join(outputdir, self.task, self.task + "_gb.svg"),
                                               display_mode='lyrz', colorbar=True, plot_abs=False, threshold=3.5)
 
-        out_file = os.path.join(datadir, self.task, "_gb.svg")
+        out_file = "./" + self.task + "/" + self.task + "_gb.svg"
         return out_file
 
     def get_mask_vox(self, msk):
@@ -255,7 +255,7 @@ class PostStats:
         for mask in masks:  # order is important -- it must correspond with the ROI labels (self.rois)
             roi = os.path.basename(mask).split('.')[0]
             vox[roi + '_vox'] = self.get_mask_vox(mask)
-            res[roi] = round(self.get_roi_perc(self.img, mask, vox[roi + '_vox']))
+            res[roi] = round(self.get_roi_perc(mask, vox[roi + '_vox']))
             if "left" in roi:
                 left_stats.append(res[roi])
             else:
@@ -289,10 +289,10 @@ class PostStats:
         plt.title(self.task)
         plt.xticks(index + bar_width / 2, self.rois)
         plt.legend()
-        plt.savefig(os.path.join(datadir, self.task + "_bar.svg"))
+        plt.savefig(os.path.join(outputdir, self.task, self.task + "_bar.svg"))
         plt.close()
 
-        plot_file = os.path.join(datadir, self.task + "_bar.svg")
+        plot_file = "./" + self.task + "/" + self.task + "_bar.svg"
         return plot_file
 
     def generate_statistics_table(self):
@@ -306,13 +306,14 @@ class PostStats:
     def create_html_viewer(self):
         html_view = nilearn.plotting.view_img(nilearn.image.smooth_img(self.img, 6), threshold=3, bg_img='MNI152', vmax=10,
                                               title=self.task)
-        html_view.save_as_html(os.path.join(datadir, self.task + "_viewer.html"))
-        viewer_file = os.path.join(datadir, self.task + "_viewer.html")
+        html_view.save_as_html(os.path.join(outputdir, self.task, self.task + "_viewer.html"))
+        viewer_file = "./" + self.task + "/" + self.task + "_viewer.html"
         return viewer_file
 
 
 fsl.FSLCommand.set_default_output_type('NIFTI_GZ')
 datadir = os.getcwd()
+dir = os.path.dirname(__file__)
 
 try:
     bidsdir = sys.argv[1]
@@ -347,7 +348,7 @@ ritg_mask = os.path.join(datadir, "masks", "itg_right.nii.gz")
 lsfg_mask = os.path.join(datadir, "masks", "sfg_left.nii.gz")
 rsfg_mask = os.path.join(datadir, "masks", "sfg_right.nii.gz")
 lwa_mask = os.path.join(datadir, "masks", "stg_post_left.nii.gz")
-rwa_mask = os.path.join(datadir, "masks", "sfg_post_right.nii.gz")
+rwa_mask = os.path.join(datadir, "masks", "stg_post_right.nii.gz")
 lhem_mask = os.path.join(datadir, "masks", "hem_left.nii.gz")
 rhem_mask = os.path.join(datadir, "masks", "hem_right.nii.gz")
 
@@ -380,7 +381,6 @@ def main():
     Render a template and write it to file.
     :return:
     """
-
     task_list = layout.get_tasks()
     if 'rest' in task_list:
         task_list.remove('rest')
@@ -396,11 +396,10 @@ def main():
         subject_id=layout.get(return_type='id', target='subject')[0].strip("[']"),
         task_list=task_list,
         task_number=len(task_list),
-        tsnr_eq=datadir + 'imgs/tsnr_equation.png',
-        mean_eq=datadir + 'imgs/mean_signal.png',
-        std_dev_eq=datadir + 'imgs/std_dev.png',
-        asym_ratio_eq=datadir + 'imgs/asym_ratio_equation.png'
-    ))
+        tsnr_eq=os.path.join(dir, 'imgs', 'tsnr_equation.png'),
+        mean_eq=os.path.join(dir, 'imgs', 'mean_signal.png'),
+        std_dev_eq=os.path.join(dir, 'imgs', 'std_dev.png'),
+        asym_ratio_eq=os.path.join(dir, 'imgs', 'asym_ratio_equation.png')))
 
     # Add the navigation bar at the top
     sections.append(navbar_template.render(
