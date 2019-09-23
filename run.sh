@@ -9,8 +9,6 @@ INPUT_DIR=${FLYWHEEL_BASE}/input
 mkdir -p ${INPUT_DIR}
 OUTPUT_DIR=${FLYWHEEL_BASE}/output
 mkdir -p ${OUTPUT_DIR}
-RESULTS_DIR=${FLYWHEEL_BASE}/report_results
-mkdir -p ${RESULTS_DIR}
 CONTAINER='[flywheel/presurgicalreport]'
 
 # CREATE A BIDS FORMATTED DIRECTORY
@@ -46,8 +44,13 @@ cd ${FLYWHEEL_BASE} || exit
 # Copy event files
 cp ${FLYWHEEL_BASE}/events/* ${INPUT_DIR}/bids_dataset/
 
+# Create results directory
+SUB_ID=$(find ${BIDS_DIR} -maxdepth 1 -type d | grep sub)
+RESULTS_DIR=${FLYWHEEL_BASE}/"${SUB_ID}"_report_results
+mkdir -p ${RESULTS_DIR}
+
 # Run script
-/usr/local/miniconda/bin/python3 report.py "${BIDS_DIR}" "${FMRIPREP_DIR}" "${RESULTS_DIR}"
+/usr/local/miniconda/bin/python3 report_test.py "${BIDS_DIR}" "${FMRIPREP_DIR}" "${RESULTS_DIR}"
 
 # Position results directory as zip file in /flywheel/v0/output
 zip -r report_results.zip report_results
