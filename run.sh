@@ -45,16 +45,20 @@ cd ${FLYWHEEL_BASE} || exit
 cp ${FLYWHEEL_BASE}/events/* ${INPUT_DIR}/bids_dataset/
 
 # Create results directory
-SUB_ID=$(find ${BIDS_DIR} -maxdepth 1 -type d | grep sub)
+SUB_ID=$(find /flywheel/v0/input/bids_dataset -maxdepth 1 -type d | grep sub | cut -d '/' -f 6)
 RESULTS_DIR=${FLYWHEEL_BASE}/"${SUB_ID}"_report_results
-mkdir -p ${RESULTS_DIR}
+mkdir -p "${RESULTS_DIR}"
 
 # Run script
 /usr/local/miniconda/bin/python3 report_test.py "${BIDS_DIR}" "${FMRIPREP_DIR}" "${RESULTS_DIR}"
 
 # Position results directory as zip file in /flywheel/v0/output
-zip -r report_results.zip report_results
-mv report_results.zip ${OUTPUT_DIR}/
+zip -r "${SUB_ID}"_report_results.zip "${SUB_ID}"_report_results
+mv "${SUB_ID}"_report_results.zip ${OUTPUT_DIR}/
+
+# Remove intermediary files (make config?)
+rm -r $(find output -maxdepth 3 -type d | grep modelfit)
+rm -r $(find output -maxdepth 3 -type d | grep susan)
 
 # Remove report_results directory from container
-rm -rf ${RESULTS_DIR}
+rm -rf "${RESULTS_DIR}"
