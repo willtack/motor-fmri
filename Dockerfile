@@ -97,7 +97,8 @@ RUN pip install --no-cache fw-heudiconv \
     && pip install --no-cache nipype \
     && pip install --no-cache nilearn \
     && pip install --no-cache pybids \
-    && pip install --no-cache jinja2
+    && pip install --no-cache jinja2 \
+    && pip install --no-cache argparse
 
 COPY run.sh /flywheel/v0/run.sh
 COPY . /flywheel/v0/
