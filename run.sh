@@ -11,12 +11,17 @@ OUTPUT_DIR=${FLYWHEEL_BASE}/output
 mkdir -p ${OUTPUT_DIR}
 CONTAINER='[flywheel/presurgicalreport]'
 
+error_exit()
+{
+	echo "$@" 1>&2
+	exit 1
+}
+
 # CREATE A BIDS FORMATTED DIRECTORY
 #   Use fw-heudiconv to accomplish this task
 /usr/local/miniconda/bin/python3 ${FLYWHEEL_BASE}/create_archive_fw_heudiconv.py
  if [[ $? != 0 ]]; then
-   echo "$CONTAINER  Problem creating archive! Exiting (1)"
-   exit 1
+   error_exit "$CONTAINER Problem creating archive! Exiting (1)"
  fi
 
 # VALIDATE INPUT DATA
@@ -24,8 +29,7 @@ CONTAINER='[flywheel/presurgicalreport]'
 if [[ "$(ls -A $INPUT_DIR)" ]] ; then
     echo "$CONTAINER  Starting..."
 else
-    echo "Input directory is empty: $INPUT_DIR"
-    exit 1
+    error_exit "$CONTAINER Input directory is empty: $INPUT_DIR"
 fi
 
 # Show the contents of the BIDS directory
@@ -34,14 +38,14 @@ ls -R ${BIDS_DIR}
 
 # Position fmriprepdir contents
 unzip ${INPUT_DIR}/fmriprepdir/*.zip -d ${INPUT_DIR}
-cd ${INPUT_DIR} || exit
+cd ${INPUT_DIR} || error_exit "$CONTAINER Could not enter input directory."
 if [ -d ${INPUT_DIR}/fmriprepdir ]; then
   rm -rf ${INPUT_DIR}/fmriprepdir
 fi
 FMRIPREP_DIR=$(find $(pwd) -maxdepth 2 -type d | grep -E -v bids | grep -E -v fmriprepdir | grep -E fmriprep)
-cd ${FLYWHEEL_BASE} || exit
+cd ${FLYWHEEL_BASE} || error_exit "$CONTAINER Could not enter /flywheel/v0/"
 
-# Copy event files
+# Copy event files to bids dataset
 cp ${FLYWHEEL_BASE}/events/* ${INPUT_DIR}/bids_dataset/
 
 # Create results directory
@@ -49,8 +53,12 @@ SUB_ID=$(find /flywheel/v0/input/bids_dataset -maxdepth 1 -type d | grep sub | c
 RESULTS_DIR=${FLYWHEEL_BASE}/"${SUB_ID}"_report_results
 mkdir -p "${RESULTS_DIR}"
 
+# Copy imgs/ to results directory
+cp ${FLYWHEEL_BASE}/imgs "${RESULTS_DIR}"/
+
 # Run script
-/usr/local/miniconda/bin/python3 report_test.py "${BIDS_DIR}" "${FMRIPREP_DIR}" "${RESULTS_DIR}"
+/usr/local/miniconda/bin/python3 report_test.py "${BIDS_DIR}" "${FMRIPREP_DIR}" "${RESULTS_DIR}" ||\
+  error_exit "$CONTAINER Main script failed! Check traceback above."
 
 # Position results directory as zip file in /flywheel/v0/output
 zip -r "${SUB_ID}"_report_results.zip "${SUB_ID}"_report_results
