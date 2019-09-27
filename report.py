@@ -114,7 +114,7 @@ def model_fitting(source_img, prepped_img, subject_info, task):
     print("Skull-stripping the preprocessed BOLD.")
     bet = fsl.BET()
     bet.inputs.in_file = prepped_img
-    bet.inputs.frac = 0.7
+    bet.inputs.frac = 0.6
     bet.inputs.functional = True
     bet.inputs.out_file = os.path.join(taskdir, task + "_input_functional_bet.nii.gz")
     bet_res = bet.run()
@@ -218,8 +218,6 @@ def model_fitting(source_img, prepped_img, subject_info, task):
                                                           'varcopes')]),
     ])
 
-    # modelfit.write_graph(graph2use='orig', dotfilename=os.path.join(outputdir, 'graph_orig.png'))
-
     # define inputs to workflow
     if aroma:
         modelspec.inputs.functional_runs = bettedinput
@@ -266,10 +264,7 @@ def model_fitting(source_img, prepped_img, subject_info, task):
 
     # cluster-wise post-stats thresholding
     cl = fsl.Cluster()
-    if aroma:
-        cl.inputs.threshold = 3.0902
-    else:
-        cl.inputs.threshold = 2.33
+    cl.inputs.threshold = 3.0902 #
     cl.inputs.in_file = z_img
     cl.inputs.dlh = dlh
     cl.inputs.out_threshold_file = os.path.join(taskdir, task + '_cluster_thresholded_z.nii.gz')
@@ -287,13 +282,11 @@ def model_fitting(source_img, prepped_img, subject_info, task):
         thresh_img = cl_res.outputs.threshold_file
     else:
         print("Resampling thresholded image to MNI space")
-        # t1_in_mni = os.path.join(fmriprepdir, "sub-" + source_img.entities['subject'], "anat",
-        #                         "sub-" + source_img.entities['subject'] + "_space-MNI152NLin2009cAsym_desc-preproc_T1w.nii.gz")
-        mni = '/usr/local/fsl/data/standard/MNI152_T1_2mm_brain.nii.gz'
+        mni = '/usr/share/fsl/data/standard/MNI152_T1_2mm_brain.nii.gz'
         resampled_thresh_img = nilearn.image.resample_to_img(cl_res.outputs.threshold_file, mni)
         thresh_img = os.path.join(taskdir, task + '_cluster_thresholded_z_resample.nii.gz')
         resampled_thresh_img.to_filename(thresh_img)
-        # threshold to remove artifacts from resampling TODO: fix resampling method
+        # threshold to remove artifacts from resampling
         thr = fsl.Threshold()
         thr.inputs.in_file = thresh_img
         thr.inputs.thresh = 0.001
@@ -433,7 +426,7 @@ class PostStats:
         return mean_tsnr, mean_fd
 
     def create_html_viewer(self):
-        html_view = nilearn.plotting.view_img(nilearn.image.smooth_img(self.img, 6), threshold=3, bg_img='MNI152', vmax=10,
+        html_view = nilearn.plotting.view_img(self.img, threshold=4, bg_img='MNI152', vmax=10,
                                               title=self.task)
         html_view.save_as_html(os.path.join(outputdir, self.task, self.task + "_viewer.html"))
         viewer_file = "./" + self.task + "/" + self.task + "_viewer.html"
@@ -475,10 +468,11 @@ def main():
     Render a template and write it to file.
     :return:
     """
-    # task_list = layout.get_tasks()
-    task_list = ['wordgen']
+    task_list = layout.get_tasks()
     if 'rest' in task_list:
         task_list.remove('rest')
+    if 'binder' in task_list:
+        task_list.remove('binder')
 
     # Content to be published
     title = "presurgical fMRI Report"
@@ -543,6 +537,7 @@ fsl.FSLCommand.set_default_output_type('NIFTI_GZ')
 datadir = os.getcwd()
 currdir = os.path.dirname(__file__)
 
+# parse command line arguments
 parser = get_parser()
 args = parser.parse_args()
 
