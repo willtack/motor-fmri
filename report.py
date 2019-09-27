@@ -14,7 +14,6 @@ from __future__ import division
 from __future__ import print_function
 
 import os
-import sys
 
 import matplotlib.pyplot as plt
 import nilearn.plotting
@@ -27,7 +26,7 @@ import pandas as pd
 from bids import BIDSLayout
 from nipype.interfaces.base import Bunch
 from jinja2 import FileSystemLoader, Environment
-from nipype.algorithms.confounds import TSNR, FramewiseDisplacement
+from nipype.algorithms.confounds import TSNR
 import argparse
 
 
@@ -39,7 +38,12 @@ def setup(taskname):
     source_img = run_list[-1]
     run = "0" + str(len(run_list))
     print('Using ' + source_img.filename + ' as source image.')
-    if aroma is True:
+    confounds = pd.read_csv(os.path.join(fmriprepdir, "sub-" + source_img.entities['subject'],
+                                         "ses-" + source_img.entities['session'], "func",
+                                         "sub-" + source_img.entities['subject'] + "_ses-" + source_img.entities[
+                                             'session'] + "_task-" + taskname + "_run-01_desc-confounds_regressors.tsv"),
+                            sep="\t", na_values="n/a")
+    if aroma:
         print("AROMA config selected. Using ICA-AROMA denoised image.")
         subject_info = [Bunch(conditions=[taskname],
                               onsets=[list(events[events.trial_type == 'stimulus'].onset)],
@@ -51,18 +55,6 @@ def setup(taskname):
                                        'session'] + "_task-" + taskname + "_run-" + run + "_space-MNI152NLin2009cAsym_desc"
                                                                                           "-smoothAROMAnonaggr_bold.nii.gz")
     else:
-
-        confounds = pd.read_csv(os.path.join(fmriprepdir, "sub-" + source_img.entities['subject'],
-                                             "ses-" + source_img.entities['session'], "func",
-                                             "sub-" + source_img.entities['subject'] + "_ses-" + source_img.entities[
-                                                 'session'] + "_task-" + taskname + "_run-01_desc-confounds_regressors.tsv"),
-                                sep="\t", na_values="n/a")
-
-        # replace leading nan in FD series with mean FD value
-        column_means = confounds.mean(axis=0, skipna=True)
-        mean_fd = column_means['framewise_displacement']
-        confounds['framewise_displacement'][0] = mean_fd
-
         subject_info = [Bunch(conditions=[taskname],
                               onsets=[list(events[events.trial_type == 'stimulus'].onset),
                                       list(events[events.trial_type == 'baseline'].onset)],
@@ -110,7 +102,7 @@ def setup(taskname):
 
     print('Using ' + os.path.basename(prepped_img) + ' as preprocessed image.')
 
-    return source_img, prepped_img, subject_info
+    return source_img, prepped_img, subject_info, confounds
 
 
 def model_fitting(source_img, prepped_img, subject_info, task):
@@ -229,7 +221,7 @@ def model_fitting(source_img, prepped_img, subject_info, task):
     # modelfit.write_graph(graph2use='orig', dotfilename=os.path.join(outputdir, 'graph_orig.png'))
 
     # define inputs to workflow
-    if aroma is True:
+    if aroma:
         modelspec.inputs.functional_runs = bettedinput
         inputspec.inputs.functional_data = bettedinput
     else:
@@ -274,7 +266,7 @@ def model_fitting(source_img, prepped_img, subject_info, task):
 
     # cluster-wise post-stats thresholding
     cl = fsl.Cluster()
-    if aroma is True:
+    if aroma:
         cl.inputs.threshold = 3.0902
     else:
         cl.inputs.threshold = 2.33
@@ -291,7 +283,7 @@ def model_fitting(source_img, prepped_img, subject_info, task):
     print('threshold file: ' + cl_res.outputs.threshold_file)
 
     # resample the result image
-    if aroma is True:
+    if aroma:
         thresh_img = cl_res.outputs.threshold_file
     else:
         print("Resampling thresholded image to MNI space")
@@ -319,12 +311,13 @@ class PostStats:
     Class to perform analyses on data
     """
 
-    def __init__(self, img, task, rois, masks):
+    def __init__(self, img, task, rois, masks, confounds):
         self.img = img
         self.task = task
         self.taskdir = os.path.join(outputdir, self.task)
         self.rois = rois  # a list of strings used as labels in plot
         self.masks = masks  # masks to do statistics on
+        self.confounds = confounds # confounds tsv (returned from setup())
 
         self.left_stats, self.right_stats, self.ars = self.calc_stats()
 
@@ -423,6 +416,7 @@ class PostStats:
         return html_table
 
     def calc_iqms(self):
+        # tSNR
         tsnr = TSNR()
         tsnr.inputs.in_file = self.img
         tsnr.inputs.mean_file = os.path.join(outputdir, self.task, self.task + "_mean_tsnr.nii.gz")
@@ -432,11 +426,9 @@ class PostStats:
         stat_run = stat.run()
         mean_tsnr = stat_run.outputs.out_stat
 
-        fd = FramewiseDisplacement()
-        fd.inputs.in_file = self.img
-        fd.inputs.parameter_source = 'FSL'
-        fd_res = fd.run()
-        mean_fd = fd_res.outputs.fd_average
+        # framewise-displacement
+        column_means = self.confounds.mean(axis=0, skipna=True)
+        mean_fd = column_means['framewise_displacement']
 
         return mean_tsnr, mean_fd
 
@@ -508,7 +500,7 @@ def main():
 
     # Do the analysis for each task. Each task has a unique set of ROIs
     for task in task_list:
-        (source_epi, input_functional, info) = setup(task)
+        (source_epi, input_functional, info, confounds) = setup(task)
         thresholded_img = model_fitting(source_epi, input_functional, info, task)
         if task == 'object':
             rois = ['whole brain', "broca's area"]
@@ -527,7 +519,7 @@ def main():
             masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lsfg_mask, rsfg_mask]
 
         # create a PostStats object for the current task. Add elements to the section based on the object's methods
-        post_stats = PostStats(thresholded_img, task, rois, masks)
+        post_stats = PostStats(thresholded_img, task, rois, masks, confounds)
         sections.append(task_section_template.render(
             section_name="ses-01_task-" + task + "_run-01",  # the link that IDs this section for the nav bar
             task_title=task,
