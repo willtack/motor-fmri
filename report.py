@@ -27,22 +27,89 @@ import pandas as pd
 from bids import BIDSLayout
 from nipype.interfaces.base import Bunch
 from jinja2 import FileSystemLoader, Environment
+from nipype.algorithms.confounds import TSNR, FramewiseDisplacement
+import argparse
 
 
 def setup(taskname):
     events = pd.read_csv(os.path.join(bidsdir, "task-" + taskname + "_events.tsv"), sep="\t")
-    source_img = layout.get(task=taskname, run=1, session="01", suffix="bold", extension="nii.gz")[0]
+
+    # Check if there's a run-02. If not, select run-01.
+    run_list = layout.get(task=taskname, session="01", suffix="bold", extension="nii.gz")
+    source_img = run_list[-1]
+    run = "0" + str(len(run_list))
     print('Using ' + source_img.filename + ' as source image.')
+    if aroma is True:
+        print("AROMA config selected. Using ICA-AROMA denoised image.")
+        subject_info = [Bunch(conditions=[taskname],
+                              onsets=[list(events[events.trial_type == 'stimulus'].onset)],
+                              durations=[list(events[events.trial_type == 'stimulus'].duration)])]
 
-    subject_info = [Bunch(conditions=[taskname],
-                          onsets=[list(events[events.trial_type == 'stimulus'].onset)],
-                          durations=[list(events[events.trial_type == 'stimulus'].duration)])]
+        prepped_img = os.path.join(fmriprepdir, "sub-" + source_img.entities['subject'],
+                                   "ses-" + source_img.entities['session'], "func",
+                                   "sub-" + source_img.entities['subject'] + "_ses-" + source_img.entities[
+                                       'session'] + "_task-" + taskname + "_run-" + run + "_space-MNI152NLin2009cAsym_desc"
+                                                                                          "-smoothAROMAnonaggr_bold.nii.gz")
+    else:
 
-    prepped_img = os.path.join(fmriprepdir, "sub-" + source_img.entities['subject'],
-                               "ses-" + source_img.entities['session'], "func",
-                               "sub-" + source_img.entities['subject'] + "_ses-" + source_img.entities[
-                                   'session'] + "_task-" + taskname + "_run-01_space-MNI152NLin2009cAsym_desc"
-                                                                      "-smoothAROMAnonaggr_bold.nii.gz")
+        confounds = pd.read_csv(os.path.join(fmriprepdir, "sub-" + source_img.entities['subject'],
+                                             "ses-" + source_img.entities['session'], "func",
+                                             "sub-" + source_img.entities['subject'] + "_ses-" + source_img.entities[
+                                                 'session'] + "_task-" + taskname + "_run-01_desc-confounds_regressors.tsv"),
+                                sep="\t", na_values="n/a")
+
+        # replace leading nan in FD series with mean FD value
+        column_means = confounds.mean(axis=0, skipna=True)
+        mean_fd = column_means['framewise_displacement']
+        confounds['framewise_displacement'][0] = mean_fd
+
+        subject_info = [Bunch(conditions=[taskname],
+                              onsets=[list(events[events.trial_type == 'stimulus'].onset),
+                                      list(events[events.trial_type == 'baseline'].onset)],
+                              durations=[list(events[events.trial_type == 'stimulus'].duration),
+                                         list(events[events.trial_type == 'baseline'].duration)],
+                              regressors=[confounds['global_signal'],
+                                          confounds['csf'],
+                                          confounds['white_matter'],
+                                          confounds['a_comp_cor_00'],
+                                          confounds['a_comp_cor_01'],
+                                          confounds['a_comp_cor_02'],
+                                          confounds['a_comp_cor_03'],
+                                          confounds['a_comp_cor_04'],
+                                          confounds['a_comp_cor_05'],
+                                          confounds['trans_x'],
+                                          confounds['trans_y'],
+                                          confounds['trans_z'],
+                                          confounds['rot_x'],
+                                          confounds['rot_y'],
+                                          confounds['rot_z'],
+                                          ],
+                              regressor_names=['global_signal',
+                                               'csf',
+                                               'white_matter',
+                                               'a_comp_cor_00',
+                                               'a_comp_cor_01',
+                                               'a_comp_cor_02',
+                                               'a_comp_cor_03',
+                                               'a_comp_cor_04',
+                                               'a_comp_cor_05',
+                                               'trans_x',
+                                               'trans_y',
+                                               'trans_z',
+                                               'rot_x',
+                                               'rot_y',
+                                               'rot_z'
+                                               ]
+                              )]
+
+        prepped_img = os.path.join(fmriprepdir, "sub-" + source_img.entities['subject'],
+                                   "ses-" + source_img.entities['session'], "func",
+                                   "sub-" + source_img.entities['subject'] + "_ses-" + source_img.entities[
+                                       'session'] + "_task-" + taskname + "_run-01_space-MNI152NLin2009cAsym_desc"
+                                                                          "-preproc_bold.nii.gz")
+
+    print('Using ' + os.path.basename(prepped_img) + ' as preprocessed image.')
+
     return source_img, prepped_img, subject_info
 
 
@@ -52,6 +119,7 @@ def model_fitting(source_img, prepped_img, subject_info, task):
         os.mkdir(taskdir)
 
     # skull strip the preprocessed BOLD
+    print("Skull-stripping the preprocessed BOLD.")
     bet = fsl.BET()
     bet.inputs.in_file = prepped_img
     bet.inputs.frac = 0.7
@@ -60,7 +128,19 @@ def model_fitting(source_img, prepped_img, subject_info, task):
     bet_res = bet.run()
     bettedinput = bet_res.outputs.out_file
 
-    task_vs_baseline = [task + " vs baseline", 'T', [task], [1]]  # set up contrasts
+    if aroma is True:
+        print("No smoothing required.")
+    else:
+        # smoothing
+        print("Smoothing the skull-stripped BOLD.")
+        smooth = fsl.Smooth()
+        smooth.inputs.in_file = bettedinput
+        smooth.inputs.fwhm = 8
+        smooth.inputs.smoothed_file = os.path.join(taskdir, task + "_input_functional_bet_smooth.nii.gz")
+        smooth.run()
+        smoothed_betted_input = os.path.join(taskdir, task + "_input_functional_bet_smooth.nii.gz")
+
+    task_vs_baseline = [task + " vs baseline", 'T', [task, 'baseline'], [1, -1]]  # set up contrasts
     contrasts = [task_vs_baseline]
 
     """
@@ -146,15 +226,21 @@ def model_fitting(source_img, prepped_img, subject_info, task):
                                                           'varcopes')]),
     ])
 
-    #modelfit.write_graph(graph2use='orig', dotfilename=os.path.join(outputdir, 'graph_orig.png'))
+    # modelfit.write_graph(graph2use='orig', dotfilename=os.path.join(outputdir, 'graph_orig.png'))
 
     # define inputs to workflow
+    if aroma is True:
+        modelspec.inputs.functional_runs = bettedinput
+        inputspec.inputs.functional_data = bettedinput
+    else:
+        modelspec.inputs.functional_runs = smoothed_betted_input
+        inputspec.inputs.functional_data = smoothed_betted_input
+        print("Using smoothed image as input.")
+
     modelspec.inputs.subject_info = subject_info
     modelspec.inputs.input_units = 'secs'
-    modelspec.inputs.functional_runs = bettedinput
     modelspec.inputs.time_repetition = source_img.entities['RepetitionTime']
     modelspec.inputs.high_pass_filter_cutoff = 90
-    inputspec.inputs.functional_data = bettedinput
     inputspec.inputs.model_serial_correlations = True
     inputspec.inputs.film_threshold = 10.0
     inputspec.inputs.interscan_interval = source_img.entities['RepetitionTime']
@@ -179,11 +265,22 @@ def model_fitting(source_img, prepped_img, subject_info, task):
     # the third node, FILM's, first element (i.e. only element) of its 'zstats' output
     z_img = list(res.nodes)[2].result.outputs.zstats[0]
 
+    # estimate smoothness
+    est = fsl.SmoothEstimate()
+    est.inputs.zstat_file = z_img
+    est.inputs.mask_file = os.path.join(taskdir, task + "_input_functional_bet_mask.nii.gz")
+    est_run = est.run()
+    dlh = est_run.outputs.dlh
+
     # cluster-wise post-stats thresholding
     cl = fsl.Cluster()
-    cl.inputs.threshold = 3.0902
+    if aroma is True:
+        cl.inputs.threshold = 3.0902
+    else:
+        cl.inputs.threshold = 2.33
     cl.inputs.in_file = z_img
-    cl.inputs.out_threshold_file = os.path.join(taskdir, 'cluster_thresholded_z.nii.gz')
+    cl.inputs.dlh = dlh
+    cl.inputs.out_threshold_file = os.path.join(taskdir, task + '_cluster_thresholded_z.nii.gz')
     print('')
     print('CLUSTER OUTPUT')
     print('')
@@ -192,8 +289,28 @@ def model_fitting(source_img, prepped_img, subject_info, task):
     cl_res = cl.run()
     print(cl.cmdline)
     print('threshold file: ' + cl_res.outputs.threshold_file)
-    print(taskdir)
-    thresh_img = os.path.join(taskdir, 'cluster_thresholded_z.nii.gz')
+
+    # resample the result image
+    if aroma is True:
+        thresh_img = cl_res.outputs.threshold_file
+    else:
+        print("Resampling thresholded image to MNI space")
+        # t1_in_mni = os.path.join(fmriprepdir, "sub-" + source_img.entities['subject'], "anat",
+        #                         "sub-" + source_img.entities['subject'] + "_space-MNI152NLin2009cAsym_desc-preproc_T1w.nii.gz")
+        mni = '/usr/local/fsl/data/standard/MNI152_T1_2mm_brain.nii.gz'
+        resampled_thresh_img = nilearn.image.resample_to_img(cl_res.outputs.threshold_file, mni)
+        thresh_img = os.path.join(taskdir, task + '_cluster_thresholded_z_resample.nii.gz')
+        resampled_thresh_img.to_filename(thresh_img)
+        # threshold to remove artifacts from resampling TODO: fix resampling method
+        thr = fsl.Threshold()
+        thr.inputs.in_file = thresh_img
+        thr.inputs.thresh = 0.001
+        thr.inputs.out_file = os.path.join(taskdir, task + '_cluster_thresholded_z_resample_thr.nii.gz')
+        thr.run()
+        thresh_img = thr.inputs.out_file
+
+    print("Image to be returned: " + thresh_img)
+
     return thresh_img
 
 
@@ -213,10 +330,12 @@ class PostStats:
 
     def create_glass_brain(self):
         if self.task == 'scenemem':
-            # masked_img = fsl.ImageMaths(in_file=img, mask_file=mtl_mask, out_file=taskdir + task + "_img_masked.nii.gz")
-            nilearn.plotting.plot_glass_brain(nilearn.image.smooth_img(self.img, 8),
+            masked_img_path = os.path.join(self.taskdir, self.task + "_img_masked.nii.gz")
+            applymask = fsl.ApplyMask(in_file=self.img, mask_file=mtl_mask, out_file=masked_img_path)
+            applymask.run()
+            nilearn.plotting.plot_glass_brain(nilearn.image.smooth_img(masked_img_path, 8),
                                               output_file=os.path.join(outputdir, self.task, self.task + "_gb.svg"),
-                                              display_mode='lyrz', colorbar=True, plot_abs=False, threshold=5)
+                                              display_mode='lyrz', colorbar=True, plot_abs=False, threshold=3.5)
         else:
             nilearn.plotting.plot_glass_brain(nilearn.image.smooth_img(self.img, 8),
                                               output_file=os.path.join(outputdir, self.task, self.task + "_gb.svg"),
@@ -303,6 +422,24 @@ class PostStats:
         html_table = df.to_html()
         return html_table
 
+    def calc_iqms(self):
+        tsnr = TSNR()
+        tsnr.inputs.in_file = self.img
+        tsnr.inputs.mean_file = os.path.join(outputdir, self.task, self.task + "_mean_tsnr.nii.gz")
+        tsnr_res = tsnr.run()
+        mean_tsnr_img = tsnr_res.outputs.mean_file
+        stat = fsl.ImageStats(in_file=mean_tsnr_img, op_string=' -M')
+        stat_run = stat.run()
+        mean_tsnr = stat_run.outputs.out_stat
+
+        fd = FramewiseDisplacement()
+        fd.inputs.in_file = self.img
+        fd.inputs.parameter_source = 'FSL'
+        fd_res = fd.run()
+        mean_fd = fd_res.outputs.fd_average
+
+        return mean_tsnr, mean_fd
+
     def create_html_viewer(self):
         html_view = nilearn.plotting.view_img(nilearn.image.smooth_img(self.img, 6), threshold=3, bg_img='MNI152', vmax=10,
                                               title=self.task)
@@ -311,32 +448,121 @@ class PostStats:
         return viewer_file
 
 
+def get_parser():
+
+    parser = argparse.ArgumentParser(
+        description="Generate a presurgical report from fmriprep results")
+    parser.add_argument(
+        "--bidsdir",
+        help="Path to a curated BIDS directory",
+        required=True
+    )
+    parser.add_argument(
+        "--fmriprepdir",
+        help="Path to fmriprep results directory",
+        required=True
+    )
+    parser.add_argument(
+        "--outputdir",
+        help="Path to a output directory",
+        required=True
+    )
+    parser.add_argument(
+        "--aroma",
+        help="Use ICA-AROMA denoised BOLD images",
+        action='store_true',
+        default=False
+    )
+
+    return parser
+
+
+def main():
+    """
+    Entry point for the script.
+    Render a template and write it to file.
+    :return:
+    """
+    # task_list = layout.get_tasks()
+    task_list = ['wordgen']
+    if 'rest' in task_list:
+        task_list.remove('rest')
+
+    # Content to be published
+    title = "presurgical fMRI Report"
+
+    # Produce our section blocks
+    sections = list()
+
+    # Add the first section, a summary list and legend
+    sections.append(summary_section_template.render(
+        subject_id=layout.get(return_type='id', target='subject')[0].strip("[']"),
+        task_list=task_list,
+        task_number=len(task_list),
+        asym_ratio_eq=os.path.join(currdir, 'imgs', 'asym_ratio_equation.png')))
+
+    # Add the navigation bar at the top
+    sections.append(navbar_template.render(
+        task_list=task_list
+    ))
+
+    # Do the analysis for each task. Each task has a unique set of ROIs
+    for task in task_list:
+        (source_epi, input_functional, info) = setup(task)
+        thresholded_img = model_fitting(source_epi, input_functional, info, task)
+        if task == 'object':
+            rois = ['whole brain', "broca's area"]
+            masks = [lhem_mask, rhem_mask, lba_mask, rba_mask]
+        elif task == 'rhyme':
+            rois = ['whole brain', "broca's area", "wernicke's area"]
+            masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lwa_mask, rwa_mask]
+        elif task == 'scenemem':
+            rois = ['mTL', 'hippocampus', 'fusiform gyrus', 'parahippocampal gyrus']
+            masks = [lmtl_mask, rmtl_mask, lhc_mask, rhc_mask, lffg_mask, rffg_mask, lphg_mask, rphg_mask]
+        elif task == 'sentence':
+            rois = ['wb', "ba", "superior TG", "middle TG", "inferior TG"]
+            masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lstg_mask, rstg_mask, lmtg_mask, rmtg_mask, litg_mask, ritg_mask]
+        elif task == 'wordgen':
+            rois = ['whole brain', "broca's area", "superior frontal gyrus"]
+            masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lsfg_mask, rsfg_mask]
+
+        # create a PostStats object for the current task. Add elements to the section based on the object's methods
+        post_stats = PostStats(thresholded_img, task, rois, masks)
+        sections.append(task_section_template.render(
+            section_name="ses-01_task-" + task + "_run-01",  # the link that IDs this section for the nav bar
+            task_title=task,
+            mean_tsnr=post_stats.calc_iqms()[0],
+            mean_fd=post_stats.calc_iqms()[1],
+            gb_path=post_stats.create_glass_brain(),  # glass brain
+            viewer_path=post_stats.create_html_viewer(),  # interactive statistical map viewer
+            bar_path=post_stats.create_bar_plot(),  # bar plot
+            table=post_stats.generate_statistics_table()  # statistics table
+        ))
+
+    # Produce and write the report to file
+    with open(os.path.join(outputdir, "report.html"), "w") as f:
+        f.write(base_template.render(
+            title=title,
+            sections=sections
+        ))
+
+
 fsl.FSLCommand.set_default_output_type('NIFTI_GZ')
 datadir = os.getcwd()
-dir = os.path.dirname(__file__)
+currdir = os.path.dirname(__file__)
 
-try:
-    bidsdir = sys.argv[1]
-except IOError:
-    print("No bids directory specified.")
-    sys.exit(1)
+parser = get_parser()
+args = parser.parse_args()
 
-try:
-    fmriprepdir = sys.argv[2]
-except IOError:
-    print("No fmriprep directory specified.")
-    sys.exit(1)
-
-try:
-    outputdir = sys.argv[3]
-except IOError:
-    print("No output directory specified.")
-    sys.exit(1)
-
+bidsdir = args.bidsdir
+fmriprepdir = args.fmriprepdir
+outputdir = args.outputdir
+aroma = args.aroma
 
 # get the layout object of the BIDS directory
 layout = BIDSLayout(bidsdir)
 
+# define the masks
 lba_mask = os.path.join(datadir, "masks", "ba_left.nii.gz")
 rba_mask = os.path.join(datadir, "masks", "ba_right.nii.gz")
 lstg_mask = os.path.join(datadir, "masks", "stg_left.nii.gz")
@@ -362,7 +588,6 @@ rffg_mask = os.path.join(datadir, "masks", "ffg_right_bin.nii.gz")
 lphg_mask = os.path.join(datadir, "masks", "phg_left_bin.nii.gz")
 rphg_mask = os.path.join(datadir, "masks", "phg_right_bin.nii.gz")
 
-
 # Configure Jinja and ready the templates
 env = Environment(
     loader=FileSystemLoader(searchpath="templates")
@@ -373,77 +598,6 @@ base_template = env.get_template("report.html")
 summary_section_template = env.get_template("summary_section.html")
 task_section_template = env.get_template("task_section.html")
 navbar_template = env.get_template("navbar.html")
-
-
-def main():
-    """
-    Entry point for the script.
-    Render a template and write it to file.
-    :return:
-    """
-    task_list = layout.get_tasks()
-    if 'rest' in task_list:
-        task_list.remove('rest')
-
-    # Content to be published
-    title = "presurgical fMRI Report"
-
-    # Produce our section blocks
-    sections = list()
-
-    # Add the first section, a summary list and legend
-    sections.append(summary_section_template.render(
-        subject_id=layout.get(return_type='id', target='subject')[0].strip("[']"),
-        task_list=task_list,
-        task_number=len(task_list),
-        tsnr_eq=os.path.join(dir, 'imgs', 'tsnr_equation.png'),
-        mean_eq=os.path.join(dir, 'imgs', 'mean_signal.png'),
-        std_dev_eq=os.path.join(dir, 'imgs', 'std_dev.png'),
-        asym_ratio_eq=os.path.join(dir, 'imgs', 'asym_ratio_equation.png')))
-
-    # Add the navigation bar at the top
-    sections.append(navbar_template.render(
-        task_list=task_list
-    ))
-
-    # Do the analysis for each task. Each task has a unique set of ROIs
-    for task in task_list:
-        (source_epi, input_functional, info) = setup(task)
-        thresholded_img = model_fitting(source_epi, input_functional, info, task)
-        if task == 'object':
-            rois = ['whole brain', "broca's area"]
-            masks = [lhem_mask, rhem_mask, lba_mask, rba_mask]
-        elif task == 'rhyme':
-            rois = ['whole brain', "broca's area", "wernicke's area"]
-            masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lwa_mask, rwa_mask]
-        elif task == 'scenemem':
-            rois = ['mTL', 'hippocampus', 'fusiform gyrus', 'parahippocampal gyrus']
-            masks = [lmtl_mask, rmtl_mask, lhc_mask, rhc_mask, lffg_mask, rffg_mask, lphg_mask, rphg_mask]
-        elif task == 'sentence':
-            rois = ['wb', "ba", "superior TG", "middle TG", "inferior TG"]
-            masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lstg_mask, rstg_mask, lmtg_mask, rmtg_mask, litg_mask, ritg_mask]
-        elif task == 'object':
-            rois = ['whole brain', "broca's area", "superior frontal gyrus"]
-            masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lsfg_mask, rsfg_mask]
-
-        # create a PostStats object for the current task. Add elements to the section based on the object's methods
-        post_stats = PostStats(thresholded_img, task, rois, masks)
-        sections.append(task_section_template.render(
-            section_name="ses-01_task-" + task + "_run-01",  # the link that IDs this section for the nav bar
-            task_title=task,
-            gb_path=post_stats.create_glass_brain(),  # glass brain
-            viewer_path=post_stats.create_html_viewer(),  # interactive statistical map viewer
-            bar_path=post_stats.create_bar_plot(),  # bar plot
-            table=post_stats.generate_statistics_table()  # statistics table
-        ))
-
-    # Produce and write the report to file
-    with open(os.path.join(outputdir, "report.html"), "w") as f:
-        f.write(base_template.render(
-            title=title,
-            sections=sections
-        ))
-
 
 if __name__ == "__main__":
     main()
