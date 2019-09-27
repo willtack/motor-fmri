@@ -6,11 +6,11 @@
 	"maintainer": "Will Tackett <william.tackett@pennmedicine.upenn.edu>",
 	"source": "https://github.com/willtack/presurgical-report",
 	"url": "https://github.com/willtack/presurgical-report",
-	"version": "0.0.3",
+	"version": "0.0.6",
 	"custom": {
 		"gear-builder": {
 			"category": "analysis",
-			"image": "willtack/presurgical-report:0.0.3"
+			"image": "willtack/presurgical-report:0.0.6"
 		},
 		"flywheel": {
 			"suite": "BrainScienceCenter"
@@ -26,7 +26,18 @@
 			"base": "file"
 		}
 	},
-	"config": {},
+	"config": {
+		"AROMA": {
+			"default": "True",
+			"description": "Use ICA-AROMA denoised BOLD images",
+			"type": "boolean"
+		},
+      "save_intermediary_files": {
+            "default": "True",
+            "description": "Save the files from the model fitting workflow",
+            "type": "boolean"
+        }
+	},
 	"environment": {
 		"FLYWHEEL": "/flywheel/v0",
 		"FSLDIR": "/usr/share/fsl",

@@ -56,9 +56,37 @@ mkdir -p "${RESULTS_DIR}"
 # Copy imgs/ to results directory
 cp ${FLYWHEEL_BASE}/imgs "${RESULTS_DIR}"/
 
+# Parse configuration
+function parse_config {
+
+  CONFIG_FILE=$FLYWHEEL_BASE/config.json
+  MANIFEST_FILE=$FLYWHEEL_BASE/manifest.json
+
+  if [[ -f $CONFIG_FILE ]]; then
+    echo "$(cat $CONFIG_FILE | jq -r '.config.'"$1")"
+  else
+    CONFIG_FILE=$MANIFEST_FILE
+    echo "$(cat $MANIFEST_FILE | jq -r '.config.'"$1"'.default')"
+  fi
+}
+
+config_aroma="$(parse_config 'AROMA')"
+
+if [[ "$config_aroma" == 'false' ]]; then
+  aroma_FLAG=''
+else
+  aroma_FLAG='--aroma'
+fi
+
+config_intermediary="$(parse_config 'save_intermediary_files')"
+
 # Run script
-/usr/local/miniconda/bin/python3 report_test.py "${BIDS_DIR}" "${FMRIPREP_DIR}" "${RESULTS_DIR}" ||\
-  error_exit "$CONTAINER Main script failed! Check traceback above."
+/usr/local/miniconda/bin/python3 report_test.py --bidsdir "${BIDS_DIR}" \
+                                                --fmriprepdir "${FMRIPREP_DIR}" \
+                                                --outputdir "${RESULTS_DIR}"
+                                                 ${aroma_FLAG} \
+                                                || error_exit "$CONTAINER Main script failed! Check traceback above."
+
 
 # Position results directory as zip file in /flywheel/v0/output
 zip -r "${SUB_ID}"_report_results.zip "${SUB_ID}"_report_results
@@ -69,4 +97,8 @@ rm -r $(find output -maxdepth 3 -type d | grep modelfit)
 rm -r $(find output -maxdepth 3 -type d | grep susan)
 
 # Remove report_results directory from container
-rm -rf "${RESULTS_DIR}"
+if [[ "$config_intermediary" == 'false' ]]; then
+  rm -rf "${RESULTS_DIR}"
+else
+  echo "Saving intermediary files from modelfitting workflow"
+fi
