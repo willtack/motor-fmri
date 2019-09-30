@@ -54,7 +54,7 @@ RESULTS_DIR=${FLYWHEEL_BASE}/"${SUB_ID}"_report_results
 mkdir -p "${RESULTS_DIR}"
 
 # Copy imgs/ to results directory
-cp ${FLYWHEEL_BASE}/imgs "${RESULTS_DIR}"/
+cp -r ${FLYWHEEL_BASE}/imgs "${RESULTS_DIR}"/
 
 # Parse configuration
 function parse_config {
@@ -81,9 +81,9 @@ fi
 config_intermediary="$(parse_config 'save_intermediary_files')"
 
 # Run script
-/usr/local/miniconda/bin/python3 report_test.py --bidsdir "${BIDS_DIR}" \
+/usr/local/miniconda/bin/python3 report.py --bidsdir "${BIDS_DIR}" \
                                                 --fmriprepdir "${FMRIPREP_DIR}" \
-                                                --outputdir "${RESULTS_DIR}"
+                                                --outputdir "${RESULTS_DIR}" \
                                                  ${aroma_FLAG} \
                                                 || error_exit "$CONTAINER Main script failed! Check traceback above."
 
@@ -93,12 +93,12 @@ zip -r "${SUB_ID}"_report_results.zip "${SUB_ID}"_report_results
 mv "${SUB_ID}"_report_results.zip ${OUTPUT_DIR}/
 
 # Remove intermediary files (make config?)
-rm -r $(find output -maxdepth 3 -type d | grep modelfit)
-rm -r $(find output -maxdepth 3 -type d | grep susan)
-
-# Remove report_results directory from container
 if [[ "$config_intermediary" == 'false' ]]; then
-  rm -rf "${RESULTS_DIR}"
+  rm -r $(find output -maxdepth 3 -type d | grep modelfit)
+  rm -r $(find output -maxdepth 3 -type d | grep susan)
 else
   echo "Saving intermediary files from modelfitting workflow"
 fi
+
+# Remove report_results directory from container
+rm -rf "${RESULTS_DIR}"
