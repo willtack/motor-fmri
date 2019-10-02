@@ -4,6 +4,7 @@
 #
 
 FLYWHEEL_BASE=/flywheel/v0
+CODE_BASE=${FLYWHEEL_BASE}/code
 MANIFEST_FILE=${FLYWHEEL_BASE}/manifest.json
 INPUT_DIR=${FLYWHEEL_BASE}/input
 mkdir -p ${INPUT_DIR}
@@ -19,7 +20,7 @@ error_exit()
 
 # CREATE A BIDS FORMATTED DIRECTORY
 #   Use fw-heudiconv to accomplish this task
-/usr/local/miniconda/bin/python3 ${FLYWHEEL_BASE}/create_archive_fw_heudiconv.py
+/usr/local/miniconda/bin/python3 ${CODE_BASE}/create_archive_fw_heudiconv.py
  if [[ $? != 0 ]]; then
    error_exit "$CONTAINER Problem creating archive! Exiting (1)"
  fi
@@ -37,7 +38,7 @@ BIDS_DIR=${INPUT_DIR}/bids_dataset
 ls -R ${BIDS_DIR}
 
 # Get the list of tasks based on what's in the bids dataset
-TASK_LIST=$(python ${FLYWHEEL_BASE}/filter_tasks.py --bidsdir ${BIDS_DIR})
+TASK_LIST=$(python ${CODE_BASE}/filter_tasks.py --bidsdir ${BIDS_DIR})
 
 # Position fmriprepdir contents
 unzip ${INPUT_DIR}/fmriprepdir/*.zip -d ${INPUT_DIR}
@@ -84,7 +85,7 @@ fi
 config_intermediary="$(parse_config 'save_intermediary_files')"
 
 # Run script
-/usr/local/miniconda/bin/python3 report.py --bidsdir "${BIDS_DIR}" \
+/usr/local/miniconda/bin/python3 ${CODE_BASE}/report.py --bidsdir "${BIDS_DIR}" \
                                            --fmriprepdir "${FMRIPREP_DIR}" \
                                            --outputdir "${RESULTS_DIR}"    \
                                            --tasks "${TASK_LIST}"  \
