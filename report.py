@@ -30,19 +30,15 @@ from nipype.algorithms.confounds import TSNR
 import argparse
 
 
-def setup(taskname):
+def setup(taskname, source_img, run_number):
     events = pd.read_csv(os.path.join(bidsdir, "task-" + taskname + "_events.tsv"), sep="\t")
 
-    # Check if there's a run-02. If not, select run-01.
-    run_list = layout.get(task=taskname, session="01", suffix="bold", extension="nii.gz")
-    source_img = run_list[-1]
-    run = "0" + str(len(run_list))
     print('Using ' + source_img.filename + ' as source image.')
     confounds = pd.read_csv(os.path.join(fmriprepdir, "sub-" + source_img.entities['subject'],
                                          "ses-" + source_img.entities['session'], "func",
                                          "sub-" + source_img.entities['subject'] + "_ses-" + source_img.entities[
-                                             'session'] + "_task-" + taskname + "_run-01_desc-confounds_regressors.tsv"),
-                            sep="\t", na_values="n/a")
+                                         'session'] + "_task-" + taskname + "_run-" + run_number +
+                                         "_desc-confounds_regressors.tsv"), sep="\t", na_values="n/a")
     if aroma:
         print("AROMA config selected. Using ICA-AROMA denoised image.")
         subject_info = [Bunch(conditions=[taskname],
@@ -52,8 +48,8 @@ def setup(taskname):
         prepped_img = os.path.join(fmriprepdir, "sub-" + source_img.entities['subject'],
                                    "ses-" + source_img.entities['session'], "func",
                                    "sub-" + source_img.entities['subject'] + "_ses-" + source_img.entities[
-                                       'session'] + "_task-" + taskname + "_run-" + run + "_space-MNI152NLin2009cAsym_desc"
-                                                                                          "-smoothAROMAnonaggr_bold.nii.gz")
+                                   'session'] + "_task-" + taskname + "_run-" + run_number +
+                                   "_space-MNI152NLin2009cAsym_desc-smoothAROMAnonaggr_bold.nii.gz")
     else:
         subject_info = [Bunch(conditions=[taskname],
                               onsets=[list(events[events.trial_type == 'stimulus'].onset),
@@ -97,8 +93,8 @@ def setup(taskname):
         prepped_img = os.path.join(fmriprepdir, "sub-" + source_img.entities['subject'],
                                    "ses-" + source_img.entities['session'], "func",
                                    "sub-" + source_img.entities['subject'] + "_ses-" + source_img.entities[
-                                       'session'] + "_task-" + taskname + "_run-01_space-MNI152NLin2009cAsym_desc"
-                                                                          "-preproc_bold.nii.gz")
+                                   'session'] + "_task-" + taskname + "_run-" + run_number +
+                                   "_space-MNI152NLin2009cAsym_desc-preproc_bold.nii.gz")
 
     print('Using ' + os.path.basename(prepped_img) + ' as preprocessed image.')
 
@@ -212,10 +208,8 @@ def model_fitting(source_img, prepped_img, subject_info, task):
     modelfit.connect([
         (modelgen, modelestimate, [('con_file', 'tcon_file'),
                                    ('fcon_file', 'fcon_file')]),
-        (modelestimate, merge_contrasts, [('zstats', 'in1'), ('zfstats',
-                                                              'in2')]),
-        (modelestimate, outputspec, [('copes', 'copes'), ('varcopes',
-                                                          'varcopes')]),
+        (modelestimate, merge_contrasts, [('zstats', 'in1'), ('zfstats', 'in2')]),
+        (modelestimate, outputspec, [('copes', 'copes'), ('varcopes', 'varcopes')]),
     ])
 
     # define inputs to workflow
@@ -264,14 +258,13 @@ def model_fitting(source_img, prepped_img, subject_info, task):
 
     # cluster-wise post-stats thresholding
     cl = fsl.Cluster()
-    cl.inputs.threshold = 3.0902 #
+    cl.inputs.threshold = 3.0902
     cl.inputs.in_file = z_img
     cl.inputs.dlh = dlh
     cl.inputs.out_threshold_file = os.path.join(taskdir, task + '_cluster_thresholded_z.nii.gz')
     print('')
     print('CLUSTER OUTPUT')
     print('')
-    print('----------output------------')
     print(cl.cmdline)
     cl_res = cl.run()
     print(cl.cmdline)
@@ -310,7 +303,7 @@ class PostStats:
         self.taskdir = os.path.join(outputdir, self.task)
         self.rois = rois  # a list of strings used as labels in plot
         self.masks = masks  # masks to do statistics on
-        self.confounds = confounds # confounds tsv (returned from setup())
+        self.confounds = confounds  # confounds tsv (returned from setup())
 
         self.left_stats, self.right_stats, self.ars = self.calc_stats()
 
@@ -319,9 +312,9 @@ class PostStats:
             masked_img_path = os.path.join(self.taskdir, self.task + "_img_masked.nii.gz")
             applymask = fsl.ApplyMask(in_file=self.img, mask_file=mtl_mask, out_file=masked_img_path)
             applymask.run()
-            nilearn.plotting.plot_glass_brain(nilearn.image.smooth_img(masked_img_path, 8),
+            nilearn.plotting.plot_glass_brain(self.img,
                                               output_file=os.path.join(outputdir, self.task, self.task + "_gb.svg"),
-                                              display_mode='lyrz', colorbar=True, plot_abs=False, threshold=3.5)
+                                              display_mode='lyrz', colorbar=True, plot_abs=False, threshold=1.5)
         else:
             nilearn.plotting.plot_glass_brain(nilearn.image.smooth_img(self.img, 8),
                                               output_file=os.path.join(outputdir, self.task, self.task + "_gb.svg"),
@@ -413,6 +406,7 @@ class PostStats:
         tsnr = TSNR()
         tsnr.inputs.in_file = self.img
         tsnr.inputs.mean_file = os.path.join(outputdir, self.task, self.task + "_mean_tsnr.nii.gz")
+        tsnr.inputs.stddev_file = os.path.join(outputdir, self.task, self.task + "stddev.nii.gz")
         tsnr_res = tsnr.run()
         mean_tsnr_img = tsnr_res.outputs.mean_file
         stat = fsl.ImageStats(in_file=mean_tsnr_img, op_string=' -M')
@@ -421,7 +415,7 @@ class PostStats:
 
         # framewise-displacement
         column_means = self.confounds.mean(axis=0, skipna=True)
-        mean_fd = column_means['framewise_displacement']
+        mean_fd = round(column_means['framewise_displacement'], 2)
 
         return mean_tsnr, mean_fd
 
@@ -434,7 +428,6 @@ class PostStats:
 
 
 def get_parser():
-
     parser = argparse.ArgumentParser(
         description="Generate a presurgical report from fmriprep results")
     parser.add_argument(
@@ -449,14 +442,20 @@ def get_parser():
     )
     parser.add_argument(
         "--outputdir",
-        help="Path to a output directory",
+        help="Path to output directory",
         required=True
     )
     parser.add_argument(
         "--aroma",
         help="Use ICA-AROMA denoised BOLD images",
         action='store_true',
-        default=False
+        default=True
+    )
+    parser.add_argument(
+        "--tasks",
+        nargs='+',
+        help="Space separated list of tasks",
+        required=True
     )
 
     return parser
@@ -468,11 +467,6 @@ def main():
     Render a template and write it to file.
     :return:
     """
-    task_list = layout.get_tasks()
-    if 'rest' in task_list:
-        task_list.remove('rest')
-    if 'binder' in task_list:
-        task_list.remove('binder')
 
     # Content to be published
     title = "presurgical fMRI Report"
@@ -494,36 +488,44 @@ def main():
 
     # Do the analysis for each task. Each task has a unique set of ROIs
     for task in task_list:
-        (source_epi, input_functional, info, confounds) = setup(task)
-        thresholded_img = model_fitting(source_epi, input_functional, info, task)
-        if task == 'object':
-            rois = ['whole brain', "broca's area"]
-            masks = [lhem_mask, rhem_mask, lba_mask, rba_mask]
-        elif task == 'rhyme':
-            rois = ['whole brain', "broca's area", "wernicke's area"]
-            masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lwa_mask, rwa_mask]
-        elif task == 'scenemem':
-            rois = ['mTL', 'hippocampus', 'fusiform gyrus', 'parahippocampal gyrus']
-            masks = [lmtl_mask, rmtl_mask, lhc_mask, rhc_mask, lffg_mask, rffg_mask, lphg_mask, rphg_mask]
-        elif task == 'sentence':
-            rois = ['wb', "ba", "superior TG", "middle TG", "inferior TG"]
-            masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lstg_mask, rstg_mask, lmtg_mask, rmtg_mask, litg_mask, ritg_mask]
-        elif task == 'wordgen':
-            rois = ['whole brain', "broca's area", "superior frontal gyrus"]
-            masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lsfg_mask, rsfg_mask]
+        # get all the runs from the BIDS dataset, loop through if more than one
+        run_list = layout.get(task=task, session="01", suffix="bold", extension="nii.gz")
+        for i in range(0, len(run_list)):
+            source_img = run_list[i]
+            run_number = "0" + str(i + 1)
+            (source_epi, input_functional, info, confounds) = setup(task, source_img, run_number)
+            thresholded_img = model_fitting(source_epi, input_functional, info, task)
+            if task == 'object':
+                rois = ['whole brain', "broca's area"]
+                masks = [lhem_mask, rhem_mask, lba_mask, rba_mask]
+            elif task == 'rhyme':
+                rois = ['whole brain', "broca's area", "wernicke's area"]
+                masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lwa_mask, rwa_mask]
+            elif task == 'scenemem':
+                rois = ['mTL', 'hippocampus', 'fusiform gyrus', 'parahippocampal gyrus']
+                masks = [lmtl_mask, rmtl_mask, lhc_mask, rhc_mask, lffg_mask, rffg_mask, lphg_mask, rphg_mask]
+            elif task == 'sentence':
+                rois = ['wb', "ba", "superior TG", "middle TG", "inferior TG"]
+                masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lstg_mask, rstg_mask, lmtg_mask, rmtg_mask, litg_mask,
+                         ritg_mask]
+            elif task == 'wordgen':
+                rois = ['whole brain', "broca's area", "superior frontal gyrus"]
+                masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lsfg_mask, rsfg_mask]
 
-        # create a PostStats object for the current task. Add elements to the section based on the object's methods
-        post_stats = PostStats(thresholded_img, task, rois, masks, confounds)
-        sections.append(task_section_template.render(
-            section_name="ses-01_task-" + task + "_run-01",  # the link that IDs this section for the nav bar
-            task_title=task,
-            mean_tsnr=post_stats.calc_iqms()[0],
-            mean_fd=post_stats.calc_iqms()[1],
-            gb_path=post_stats.create_glass_brain(),  # glass brain
-            viewer_path=post_stats.create_html_viewer(),  # interactive statistical map viewer
-            bar_path=post_stats.create_bar_plot(),  # bar plot
-            table=post_stats.generate_statistics_table()  # statistics table
-        ))
+            # create a PostStats object for the current task. Add elements to the section based on the object's methods
+            post_stats = PostStats(thresholded_img, task, rois, masks, confounds)
+            sections.append(task_section_template.render(
+                section_name="ses-01_task-" + task + "_run-" + run_number,  # the link that IDs this section for the nav bar
+                task_title=task,
+                run_number=str(i + 1),
+                len_run_list=len(run_list),
+                mean_tsnr=post_stats.calc_iqms()[0],
+                mean_fd=post_stats.calc_iqms()[1],
+                gb_path=post_stats.create_glass_brain(),  # glass brain
+                viewer_path=post_stats.create_html_viewer(),  # interactive statistical map viewer
+                bar_path=post_stats.create_bar_plot(),  # bar plot
+                table=post_stats.generate_statistics_table()  # statistics table
+            ))
 
     # Produce and write the report to file
     with open(os.path.join(outputdir, "report.html"), "w") as f:
@@ -538,13 +540,16 @@ datadir = os.getcwd()
 currdir = os.path.dirname(__file__)
 
 # parse command line arguments
-parser = get_parser()
-args = parser.parse_args()
+arg_parser = get_parser()
+args = arg_parser.parse_args()
 
 bidsdir = args.bidsdir
 fmriprepdir = args.fmriprepdir
 outputdir = args.outputdir
 aroma = args.aroma
+task_arg = args.tasks  # this returns a list with one item, a string with each task separated by a space
+task_str = task_arg[0]  # take the string (first and only element of list)
+task_list = task_str.split()  # and split it into a list with a string element for each task
 
 # get the layout object of the BIDS directory
 layout = BIDSLayout(bidsdir)

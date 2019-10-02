@@ -36,6 +36,9 @@ fi
 BIDS_DIR=${INPUT_DIR}/bids_dataset
 ls -R ${BIDS_DIR}
 
+# Get the list of tasks based on what's in the bids dataset
+TASK_LIST=$(python ${FLYWHEEL_BASE}/filter_tasks.py --bidsdir ${BIDS_DIR})
+
 # Position fmriprepdir contents
 unzip ${INPUT_DIR}/fmriprepdir/*.zip -d ${INPUT_DIR}
 cd ${INPUT_DIR} || error_exit "$CONTAINER Could not enter input directory."
@@ -72,7 +75,7 @@ function parse_config {
 
 config_aroma="$(parse_config 'AROMA')"
 
-if [[ "$config_aroma" == 'false' ]]; then
+if [[ $config_aroma == 'false' ]]; then
   aroma_FLAG=''
 else
   aroma_FLAG='--aroma'
@@ -82,10 +85,11 @@ config_intermediary="$(parse_config 'save_intermediary_files')"
 
 # Run script
 /usr/local/miniconda/bin/python3 report.py --bidsdir "${BIDS_DIR}" \
-                                                --fmriprepdir "${FMRIPREP_DIR}" \
-                                                --outputdir "${RESULTS_DIR}" \
-                                                 ${aroma_FLAG} \
-                                                || error_exit "$CONTAINER Main script failed! Check traceback above."
+                                           --fmriprepdir "${FMRIPREP_DIR}" \
+                                           --outputdir "${RESULTS_DIR}"    \
+                                           --tasks "${TASK_LIST}"  \
+                                            ${aroma_FLAG} \
+                                            || error_exit "$CONTAINER Main script failed! Check traceback above."
 
 
 # Position results directory as zip file in /flywheel/v0/output
@@ -94,11 +98,15 @@ mv "${SUB_ID}"_report_results.zip ${OUTPUT_DIR}/
 
 # Remove intermediary files (make config?)
 if [[ "$config_intermediary" == 'false' ]]; then
-  rm -r $(find output -maxdepth 3 -type d | grep modelfit)
-  rm -r $(find output -maxdepth 3 -type d | grep susan)
+  rm -r $(find output -maxdepth 3 -type d | grep modelfit) || echo "No intermediary files to delete."
 else
-  echo "Saving intermediary files from modelfitting workflow"
+  echo "Saving intermediary files from modelfitting workflow."
 fi
 
 # Remove report_results directory from container
-rm -rf "${RESULTS_DIR}"
+rm -rf "${RESULTS_DIR}" || echo "No results directory to delete."
+rm stat_result.json || echo "stat_result.json not found. No need to remove."
+rm tsnr.nii.gz || echo "tsnr.nii.gz not found. No need to remove."
+
+echo "Completed analysis and generated report successfully!"
+
