@@ -104,10 +104,6 @@ COPY run.sh /flywheel/v0/run.sh
 COPY . /flywheel/v0/
 RUN chmod +x ${FLYWHEEL}/*
 
-# ENV preservation for Flywheel Engine
-RUN env -u HOSTNAME -u PWD | \
-  awk -F = '{ print "export " $1 "=\"" $2 "\"" }' > ${FLYWHEEL}/docker-env.sh
-
 RUN apt-get update -y
 RUN apt-get upgrade -y
 RUN apt-get install -y unzip
