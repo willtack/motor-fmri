@@ -1,5 +1,12 @@
+{% if task_title == 'scenemem' %}
+    <hr noshade>
+{% endif %}
 <div id={{section_name}} style="margin-top: 75px">
-    <h1 class="run-title">{{task_title}}</h1>
+    {% if len_run_list > 1 %}
+        <h1 class="run-title">{{task_title}} run {{run_number}}</h1>
+    {% else %}
+        <h1 class="run-title">{{task_title}}</h1>
+    {% endif %}
     <h3 class="elem-title">Glass brain</h3>
     <ul class="elem-desc">
         <li>tSNR = {{mean_tsnr}}</li>
