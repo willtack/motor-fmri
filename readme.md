@@ -28,7 +28,7 @@ python report.py --bidsdir /flywheel/v0/bids_dataset --fmriprepdir /flywheel/v0/
 Usage:
 ```
 usage: report.py [-h] --bidsdir BIDSDIR --fmriprepdir FMRIPREPDIR --outputdir
-                 OUTPUTDIR [--aroma]
+                 OUTPUTDIR [--aroma] --tasks TASKS [TASKS ...]
 
 Generate a presurgical report from fmriprep results
 
@@ -36,6 +36,8 @@ optional arguments:
   -h, --help            show this help message and exit
   --bidsdir BIDSDIR     Path to a curated BIDS directory
   --fmriprepdir FMRIPREPDIR Path to fmriprep results directory
-  --outputdir OUTPUTDIR  Path to output directory
-  --aroma Use ICA-AROMA denoised BOLD images
+  --outputdir OUTPUTDIR Path to output directory
+  --tasks TASKS [TASKS ...] Space separated list of tasks
+  --aroma               Use ICA-AROMA denoised BOLD images
+
 ```
