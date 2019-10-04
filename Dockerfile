@@ -29,12 +29,6 @@ RUN apt-get update && \
                     nodejs && \
     apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-
-# Installing Neurodebian packages (FSL, AFNI, git)
-#RUN curl -sSL "http://neuro.debian.net/lists/$( lsb_release -c | cut -f2 ).us-ca.full" >> /etc/apt/sources.list.d/neurodebian.sources.list && \
-#    apt-key add /usr/local/etc/neurodebian.gpg && \
-#    (apt-key adv --refresh-keys --keyserver hkp://ha.pool.sks-keyservers.net 0xA5D32F012649A5A9 || true)
-
 ENV FSLDIR="/usr/share/fsl"
 RUN apt-get update -qq \
   && apt-get install -y -q --no-install-recommends \
@@ -65,7 +59,6 @@ RUN apt-get update -qq \
 
 ENV PATH="${FSLDIR}/bin:$PATH"
 
-# Installing precomputed python packages
 # Installing and setting up miniconda
 RUN curl -sSLO https://repo.continuum.io/miniconda/Miniconda3-4.5.12-Linux-x86_64.sh && \
     bash Miniconda3-4.5.12-Linux-x86_64.sh -b -p /usr/local/miniconda && \
@@ -98,7 +91,9 @@ RUN pip install --no-cache fw-heudiconv \
     && pip install --no-cache nilearn \
     && pip install --no-cache pybids \
     && pip install --no-cache jinja2 \
-    && pip install --no-cache argparse
+    && pip install --no-cache argparse \
+    && pip install --no-cache nibabel \
+    && pip install --no-cache nistats
 
 COPY run.sh /flywheel/v0/run.sh
 COPY . /flywheel/v0/
