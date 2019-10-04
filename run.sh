@@ -83,15 +83,32 @@ else
 fi
 
 config_intermediary="$(parse_config 'save_intermediary_files')"
+config_thresh_method="$(parse_config 'thresh_method')"
+config_fwhm="$(parse_config 'fwhm')"
+config_cthresh="$(parse_config 'cluster_size_thresh')"
 
 # Run script
-/usr/local/miniconda/bin/python3 ${CODE_BASE}/report.py --bidsdir "${BIDS_DIR}" \
-                                           --fmriprepdir "${FMRIPREP_DIR}" \
-                                           --outputdir "${RESULTS_DIR}"    \
-                                           --tasks "${TASK_LIST}"  \
-                                            ${aroma_FLAG} \
-                                            || error_exit "$CONTAINER Main script failed! Check traceback above."
-
+if [[ $config_thresh_method == 'fdr' ]]; then
+  /usr/local/miniconda/bin/python3 ${CODE_BASE}/report.py --bidsdir "${BIDS_DIR}" \
+                                             --fmriprepdir "${FMRIPREP_DIR}" \
+                                             --outputdir "${RESULTS_DIR}"    \
+                                             --tasks "${TASK_LIST}"  \
+                                             --fwhm "$config_fwhm" \
+                                             --cthresh "$config_cthresh" \
+                                              ${aroma_FLAG} \
+                                              || error_exit "$CONTAINER Main script failed! Check traceback above."
+elif [[ $config_thresh_method == 'cluster' ]]; then
+  /usr/local/miniconda/bin/python3 ${CODE_BASE}/report_cluster.py --bidsdir "${BIDS_DIR}" \
+                                             --fmriprepdir "${FMRIPREP_DIR}" \
+                                             --outputdir "${RESULTS_DIR}"    \
+                                             --tasks "${TASK_LIST}"  \
+                                             --fwhm "$config_fwhm" \
+                                             --cthresh "$config_cthresh" \
+                                              ${aroma_FLAG} \
+                                              || error_exit "$CONTAINER Main script failed! Check traceback above."
+else
+  error_exit "Could not identify thresholding configuration."
+fi
 
 # Position results directory as zip file in /flywheel/v0/output
 zip -r "${SUB_ID}"_report_results.zip "${SUB_ID}"_report_results
