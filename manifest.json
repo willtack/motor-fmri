@@ -6,7 +6,7 @@
 	"maintainer": "Will Tackett <william.tackett@pennmedicine.upenn.edu>",
 	"source": "https://github.com/willtack/presurgical-report",
 	"url": "https://github.com/willtack/presurgical-report",
-	"version": "1.0.1",
+	"version": "1.0.3",
 	"custom": {
 		"gear-builder": {
 			"category": "analysis",
@@ -27,15 +27,34 @@
 		}
 	},
 	"config": {
-		"AROMA": {
-			"default": "False",
-			"description": "Use ICA-AROMA denoised BOLD images",
+		"AROMA":{
+			"default": false,
+			"description": "Use ICA-AROMA denoised BOLD images.",
 			"type": "boolean"
 		},
-      "save_intermediary_files": {
-            "default": "False",
-            "description": "Save the files from the model fitting workflow",
+      "save_intermediary_files":{
+            "default": false,
+            "description": "Save the files from the model fitting workflow.",
             "type": "boolean"
+        },
+		"thresh_method":{
+            "default": "fdr",
+            "description": "False discovery rate or cluster-wise random field-based thresholding.",
+			"enum":[
+				"FDR",
+				"cluster"
+			],
+            "type": "string"
+        },
+		"fwhm":{
+            "default": "8",
+            "description": "Size of smoothing kernel",
+            "type": "integer"
+        },
+		"cluster_size_thresh":{
+            "default": "75",
+            "description": "Cluster extent threshold",
+            "type": "integer"
         }
 	},
 	"environment": {
