@@ -1,3 +1,5 @@
+nibabel
+nistats
 matplotlib
 nilearn
 nipype
