@@ -1,9 +1,8 @@
-#!/usr/local/miniconda/bin/python
 #
-#   nipype script to analyze fmri runs preprocessed by fmriprep, compute statistics related to language lateralization
+#   Script to analyze fmri runs preprocessed by fmriprep, compute statistics related to language lateralization
 #   and compile these results into an html report
 #
-#   Intended for clinical language task fMRIs of presurgicalEpilepsy patients
+#   Intended for clinical language task fMRIs of presurgical epilepsy patients
 #
 #   Will Tackett, University of Pennsylvania
 #
@@ -15,30 +14,49 @@ from __future__ import print_function
 
 import os
 
-import matplotlib.pyplot as plt
 import nilearn.plotting
 import nipype.algorithms.modelgen as model
 import nipype.interfaces.fsl as fsl
 import nipype.interfaces.utility as util
 import nipype.pipeline.engine as pe
-import numpy as np
 import pandas as pd
 from bids import BIDSLayout
+import nistats
+from nistats import thresholding
 from nipype.interfaces.base import Bunch
 from jinja2 import FileSystemLoader, Environment
-from nipype.algorithms.confounds import TSNR
+from code.poststats import PostStats
 import argparse
+import nibabel
 
 
 def setup(taskname, source_img, run_number):
+    global aroma
     events = pd.read_csv(os.path.join(bidsdir, "task-" + taskname + "_events.tsv"), sep="\t")
 
     print('Using ' + source_img.filename + ' as source image.')
-    confounds = pd.read_csv(os.path.join(fmriprepdir, "sub-" + source_img.entities['subject'],
+    confounds_path = os.path.join(fmriprepdir, "sub-" + source_img.entities['subject'],
                                          "ses-" + source_img.entities['session'], "func",
                                          "sub-" + source_img.entities['subject'] + "_ses-" + source_img.entities[
                                          'session'] + "_task-" + taskname + "_run-" + run_number +
-                                         "_desc-confounds_regressors.tsv"), sep="\t", na_values="n/a")
+                                         "_desc-confounds_regressors.tsv")
+    aroma_path = os.path.join(fmriprepdir, "sub-" + source_img.entities['subject'],
+                                   "ses-" + source_img.entities['session'], "func",
+                                   "sub-" + source_img.entities['subject'] + "_ses-" + source_img.entities[
+                                   'session'] + "_task-" + taskname + "_run-" + run_number +
+                                   "_space-MNI152NLin2009cAsym_desc-smoothAROMAnonaggr_bold.nii.gz")
+
+    if os.path.isfile(confounds_path):
+        print("Found confounds tsv at %s" % confounds_path)
+        confounds = pd.read_csv(confounds_path, sep="\t", na_values="n/a")
+    elif not os.path.isfile(confounds_path) and os.path.isfile(aroma_path):
+        print("Confounds file not found...using AROMA-denoised image")
+        confounds = ''
+        aroma = True
+    else:
+        print("Could not find confounds file or AROMA-denoised image. Ending script.")
+        exit(1)
+
     if aroma:
         print("AROMA config selected. Using ICA-AROMA denoised image.")
         subject_info = [Bunch(conditions=[taskname],
@@ -112,6 +130,7 @@ def model_fitting(source_img, prepped_img, subject_info, task):
     bet.inputs.in_file = prepped_img
     bet.inputs.frac = 0.6
     bet.inputs.functional = True
+    bet.inputs.mask = True
     bet.inputs.out_file = os.path.join(taskdir, task + "_input_functional_bet.nii.gz")
     bet_res = bet.run()
     bettedinput = bet_res.outputs.out_file
@@ -123,7 +142,7 @@ def model_fitting(source_img, prepped_img, subject_info, task):
         print("Smoothing the skull-stripped BOLD.")
         smooth = fsl.Smooth()
         smooth.inputs.in_file = bettedinput
-        smooth.inputs.fwhm = 8
+        smooth.inputs.fwhm = fwhm
         smooth.inputs.smoothed_file = os.path.join(taskdir, task + "_input_functional_bet_smooth.nii.gz")
         smooth.run()
         smoothed_betted_input = os.path.join(taskdir, task + "_input_functional_bet_smooth.nii.gz")
@@ -249,182 +268,44 @@ def model_fitting(source_img, prepped_img, subject_info, task):
     # the third node, FILM's, first element (i.e. only element) of its 'zstats' output
     z_img = list(res.nodes)[2].result.outputs.zstats[0]
 
-    # estimate smoothness
-    est = fsl.SmoothEstimate()
-    est.inputs.zstat_file = z_img
-    est.inputs.mask_file = os.path.join(taskdir, task + "_input_functional_bet_mask.nii.gz")
-    est_run = est.run()
-    dlh = est_run.outputs.dlh
+    fdr_thresh_img, fdr_threshold = nistats.thresholding.map_threshold(stat_img=z_img,
+                                                        mask_img=os.path.join(taskdir, task + "_input_functional_bet_mask.nii.gz"),
+                                                        level=0.05,
+                                                        height_control='fdr',
+                                                        cluster_threshold=cthresh)
+    print("Thresholding at FDR-rate corrected threshold of " + str(fdr_threshold))
+    fdr_thresh_img_path = os.path.join(taskdir, task + '_fdr_thresholded_z.nii.gz')
+    nibabel.save(fdr_thresh_img, fdr_thresh_img_path)
 
-    # cluster-wise post-stats thresholding
-    cl = fsl.Cluster()
-    cl.inputs.threshold = 3.0902
-    cl.inputs.in_file = z_img
-    cl.inputs.dlh = dlh
-    cl.inputs.out_threshold_file = os.path.join(taskdir, task + '_cluster_thresholded_z.nii.gz')
-    print('')
-    print('CLUSTER OUTPUT')
-    print('')
-    print(cl.cmdline)
-    cl_res = cl.run()
-    print(cl.cmdline)
-    print('threshold file: ' + cl_res.outputs.threshold_file)
+    # Do a cluster analysis using the FDR corrected threshold on the original z_img
+    cl = fsl.Cluster(in_file=z_img, threshold=fdr_threshold, out_size_file=os.path.join(taskdir, task + "_cluster_sizes.nii.gz"))
+    cl_run = cl.run()
+    clusters = cl_run.runtime.stdout  # write the terminal output to a text file
+    cluster_file = os.path.join(taskdir, task + "_cluster_stats.txt")
+    f = open(cluster_file, 'w')
+    f.write(clusters)
+    f.close()
 
     # resample the result image
     if aroma:
-        thresh_img = cl_res.outputs.threshold_file
+        thresh_img = fdr_thresh_img_path
     else:
         print("Resampling thresholded image to MNI space")
-        mni = '/usr/share/fsl/data/standard/MNI152_T1_2mm_brain.nii.gz'
-        resampled_thresh_img = nilearn.image.resample_to_img(cl_res.outputs.threshold_file, mni)
-        thresh_img = os.path.join(taskdir, task + '_cluster_thresholded_z_resample.nii.gz')
+        mni = '/usr/local/fsl/data/standard/MNI152_T1_2mm_brain.nii.gz'  # TODO: change local to share before build
+        resampled_thresh_img = nilearn.image.resample_to_img(fdr_thresh_img_path, mni)
+        thresh_img = os.path.join(taskdir, task + '_fdr_thresholded_z_resample.nii.gz')
         resampled_thresh_img.to_filename(thresh_img)
         # threshold to remove artifacts from resampling
         thr = fsl.Threshold()
         thr.inputs.in_file = thresh_img
         thr.inputs.thresh = 0.001
-        thr.inputs.out_file = os.path.join(taskdir, task + '_cluster_thresholded_z_resample_thr.nii.gz')
+        thr.inputs.out_file = os.path.join(taskdir, task + '_fdr_thresholded_z_resample_thr.nii.gz')
         thr.run()
         thresh_img = thr.inputs.out_file
 
     print("Image to be returned: " + thresh_img)
 
     return thresh_img
-
-
-class PostStats:
-    """
-    Class to perform analyses on data
-    """
-
-    def __init__(self, img, task, rois, masks, confounds):
-        self.img = img
-        self.task = task
-        self.taskdir = os.path.join(outputdir, self.task)
-        self.rois = rois  # a list of strings used as labels in plot
-        self.masks = masks  # masks to do statistics on
-        self.confounds = confounds  # confounds tsv (returned from setup())
-
-        self.left_stats, self.right_stats, self.ars = self.calc_stats()
-
-    def create_glass_brain(self):
-        if self.task == 'scenemem':
-            masked_img_path = os.path.join(self.taskdir, self.task + "_img_masked.nii.gz")
-            applymask = fsl.ApplyMask(in_file=self.img, mask_file=mtl_mask, out_file=masked_img_path)
-            applymask.run()
-            nilearn.plotting.plot_glass_brain(self.img,
-                                              output_file=os.path.join(outputdir, self.task, self.task + "_gb.svg"),
-                                              display_mode='lyrz', colorbar=True, plot_abs=False, threshold=1.5)
-        else:
-            nilearn.plotting.plot_glass_brain(nilearn.image.smooth_img(self.img, 8),
-                                              output_file=os.path.join(outputdir, self.task, self.task + "_gb.svg"),
-                                              display_mode='lyrz', colorbar=True, plot_abs=False, threshold=3.5)
-
-        out_file = "./" + self.task + "/" + self.task + "_gb.svg"
-        return out_file
-
-    def get_mask_vox(self, msk):
-        mask_stat = fsl.ImageStats(in_file=msk, op_string=' -V')
-        mask_run = mask_stat.run()
-        mask_vox = list(mask_run.outputs.out_stat)
-        return mask_vox[0]
-
-    def get_roi_perc(self, msk, mask_vox):
-        roi_stat = fsl.ImageStats(in_file=self.img, op_string='-k ' + msk + ' -V')
-        print(roi_stat.cmdline)
-        stat_run = roi_stat.run()
-        stat = float(list(stat_run.outputs.out_stat)[0])
-        perc = (stat / mask_vox) * 100
-        return perc
-
-    def calc_ar(self, left, right):
-        if not (left + right) > 0:
-            return 0
-        else:
-            return (left - right) / (left + right)
-
-    def calc_stats(self):
-        masks = self.masks
-        vox = {}  # dictionary of mask: mask voxels
-        res = {}  # dictionary of roi: percent activation
-        left_stats = []  # for plot
-        right_stats = []
-        ars = []  # list of asymmetry ratios for table
-        for mask in masks:  # order is important -- it must correspond with the ROI labels (self.rois)
-            roi = os.path.basename(mask).split('.')[0]
-            vox[roi + '_vox'] = self.get_mask_vox(mask)
-            res[roi] = round(self.get_roi_perc(mask, vox[roi + '_vox']))
-            if "left" in roi:
-                left_stats.append(res[roi])
-            else:
-                right_stats.append(res[roi])
-
-        for i in range(0, len(left_stats)):
-            ar_result = round(self.calc_ar(left_stats[i], right_stats[i]), 2)
-            ars.append(ar_result)
-
-        return left_stats, right_stats, ars
-
-    def create_bar_plot(self):
-        # Bar graph
-        index = np.arange(len(self.left_stats))
-        bar_width = 0.2
-        opacity = 0.8
-        axes = plt.gca()
-        axes.set_ylim([0, 100])
-
-        plt.bar(index, self.left_stats, bar_width,
-                alpha=opacity,
-                color='#4f6bb0',
-                label='Left')
-        plt.bar(index + bar_width, self.right_stats, bar_width,
-                alpha=opacity,
-                color='#550824',
-                label='Right')
-
-        plt.xlabel('ROI')
-        plt.ylabel('% activated voxels in ROI')
-        plt.title(self.task)
-        plt.xticks(index + bar_width / 2, self.rois)
-        plt.legend()
-        plt.savefig(os.path.join(outputdir, self.task, self.task + "_bar.svg"))
-        plt.close()
-
-        plot_file = "./" + self.task + "/" + self.task + "_bar.svg"
-        return plot_file
-
-    def generate_statistics_table(self):
-        row = self.rois
-        column = ['left %', 'right %', 'asymmetry ratio']
-        data = np.array([self.left_stats, self.right_stats, self.ars]).transpose()
-        df = pd.DataFrame(data, index=row, columns=column)
-        html_table = df.to_html()
-        return html_table
-
-    def calc_iqms(self):
-        # tSNR
-        tsnr = TSNR()
-        tsnr.inputs.in_file = self.img
-        tsnr.inputs.mean_file = os.path.join(outputdir, self.task, self.task + "_mean_tsnr.nii.gz")
-        tsnr.inputs.stddev_file = os.path.join(outputdir, self.task, self.task + "stddev.nii.gz")
-        tsnr_res = tsnr.run()
-        mean_tsnr_img = tsnr_res.outputs.mean_file
-        stat = fsl.ImageStats(in_file=mean_tsnr_img, op_string=' -M')
-        stat_run = stat.run()
-        mean_tsnr = stat_run.outputs.out_stat
-
-        # framewise-displacement
-        column_means = self.confounds.mean(axis=0, skipna=True)
-        mean_fd = round(column_means['framewise_displacement'], 2)
-
-        return mean_tsnr, mean_fd
-
-    def create_html_viewer(self):
-        html_view = nilearn.plotting.view_img(self.img, threshold=4, bg_img='MNI152', vmax=10,
-                                              title=self.task)
-        html_view.save_as_html(os.path.join(outputdir, self.task, self.task + "_viewer.html"))
-        viewer_file = "./" + self.task + "/" + self.task + "_viewer.html"
-        return viewer_file
 
 
 def get_parser():
@@ -449,12 +330,24 @@ def get_parser():
         "--aroma",
         help="Use ICA-AROMA denoised BOLD images",
         action='store_true',
-        default=True
+        default=False
     )
     parser.add_argument(
         "--tasks",
         nargs='+',
         help="Space separated list of tasks",
+        required=True
+    )
+    parser.add_argument(
+        "--fwhm",
+        help="size of smoothing kernel",
+        type=int,
+        required=True
+    )
+    parser.add_argument(
+        "--cthresh",
+        help="Cluster extent threshold",
+        type=int,
         required=True
     )
 
@@ -513,7 +406,7 @@ def main():
                 masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lsfg_mask, rsfg_mask]
 
             # create a PostStats object for the current task. Add elements to the section based on the object's methods
-            post_stats = PostStats(thresholded_img, task, rois, masks, confounds)
+            post_stats = PostStats(thresholded_img, task, rois, masks, confounds, outputdir, datadir)
             sections.append(task_section_template.render(
                 section_name="ses-01_task-" + task + "_run-" + run_number,  # the link that IDs this section for the nav bar
                 task_title=task,
@@ -550,6 +443,8 @@ aroma = args.aroma
 task_arg = args.tasks  # this returns a list with one item, a string with each task separated by a space
 task_str = task_arg[0]  # take the string (first and only element of list)
 task_list = task_str.split()  # and split it into a list with a string element for each task
+fwhm = args.fwhm
+cthresh = args.cthresh
 
 # get the layout object of the BIDS directory
 layout = BIDSLayout(bidsdir)
