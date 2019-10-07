@@ -4,7 +4,7 @@
 #
 
 FLYWHEEL_BASE=/flywheel/v0
-CODE_BASE=${FLYWHEEL_BASE}/code
+CODE_BASE=${FLYWHEEL_BASE}/src
 MANIFEST_FILE=${FLYWHEEL_BASE}/manifest.json
 INPUT_DIR=${FLYWHEEL_BASE}/input
 mkdir -p ${INPUT_DIR}
@@ -43,9 +43,6 @@ TASK_LIST=$(python ${CODE_BASE}/filter_tasks.py --bidsdir ${BIDS_DIR})
 # Position fmriprepdir contents
 unzip ${INPUT_DIR}/fmriprepdir/*.zip -d ${INPUT_DIR}
 cd ${INPUT_DIR} || error_exit "$CONTAINER Could not enter input directory."
-if [ -d ${INPUT_DIR}/fmriprepdir ]; then
-  rm -rf ${INPUT_DIR}/fmriprepdir
-fi
 FMRIPREP_DIR=$(find $(pwd) -maxdepth 2 -type d | grep -E -v bids | grep -E -v fmriprepdir | grep -E fmriprep)
 cd ${FLYWHEEL_BASE} || error_exit "$CONTAINER Could not enter /flywheel/v0/"
 
@@ -88,27 +85,16 @@ config_fwhm="$(parse_config 'fwhm')"
 config_cthresh="$(parse_config 'cluster_size_thresh')"
 
 # Run script
-if [[ $config_thresh_method == 'FDR' ]]; then
-  /usr/local/miniconda/bin/python3 ${CODE_BASE}/report.py --bidsdir "${BIDS_DIR}" \
-                                             --fmriprepdir "${FMRIPREP_DIR}" \
-                                             --outputdir "${RESULTS_DIR}"    \
-                                             --tasks "${TASK_LIST}"  \
-                                             --fwhm "$config_fwhm" \
-                                             --cthresh "$config_cthresh" \
-                                              ${aroma_FLAG} \
-                                              || error_exit "$CONTAINER Main script failed! Check traceback above."
-elif [[ $config_thresh_method == 'cluster' ]]; then
-  /usr/local/miniconda/bin/python3 ${CODE_BASE}/report_cluster.py --bidsdir "${BIDS_DIR}" \
-                                             --fmriprepdir "${FMRIPREP_DIR}" \
-                                             --outputdir "${RESULTS_DIR}"    \
-                                             --tasks "${TASK_LIST}"  \
-                                             --fwhm "$config_fwhm" \
-                                             --cthresh "$config_cthresh" \
-                                              ${aroma_FLAG} \
-                                              || error_exit "$CONTAINER Main script failed! Check traceback above."
-else
-  error_exit "Could not identify thresholding configuration."
-fi
+/usr/local/miniconda/bin/python3 ${CODE_BASE}/report.py --bidsdir "${BIDS_DIR}" \
+                                           --fmriprepdir "${FMRIPREP_DIR}" \
+                                           --outputdir "${RESULTS_DIR}"    \
+                                           --tasks "${TASK_LIST}"  \
+                                           --mcc "$config_thresh_method" \
+                                           --fwhm "$config_fwhm" \
+                                           --cthresh "$config_cthresh" \
+                                            ${aroma_FLAG} \
+                                            || error_exit "$CONTAINER Main script failed! Check traceback above."
+
 
 # Position results directory as zip file in /flywheel/v0/output
 zip -r "${SUB_ID}"_report_results.zip "${SUB_ID}"_report_results

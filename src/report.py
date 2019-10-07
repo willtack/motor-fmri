@@ -1,8 +1,7 @@
 #
-#   Script to analyze fmri runs preprocessed by fmriprep, compute statistics related to language lateralization
-#   and compile these results into an html report
-#
-#   Intended for clinical language task fMRIs of presurgical epilepsy patients
+#   This is the main script of the presurgical report gear. It performs model-fitting of fMRI runs preprocessed by fMRIPREP
+#   to generate activation maps, computes statistics related to language lateralization with a PostStats object and compiles
+#   these results into an html report. The program is intended to analyze fMRI scans of patients undergoing presurgical evaluation.
 #
 #   Will Tackett, University of Pennsylvania
 #
@@ -25,7 +24,7 @@ import nistats
 from nistats import thresholding
 from nipype.interfaces.base import Bunch
 from jinja2 import FileSystemLoader, Environment
-from code.poststats import PostStats
+from src.poststats import PostStats
 import argparse
 import nibabel
 
@@ -257,44 +256,88 @@ def model_fitting(source_img, prepped_img, subject_info, task):
         print("%s: %s" % ("NODE", list(res.nodes)[i]), file=f)
         print(list(res.nodes)[i].result.outputs, file=f)
         print('', file=f)
+    f.close()
 
     # the third node, FILM's, first element (i.e. only element) of its 'zstats' output
     z_img = list(res.nodes)[2].result.outputs.zstats[0]
 
-    fdr_thresh_img, fdr_threshold = nistats.thresholding.map_threshold(stat_img=z_img,
-                                                        mask_img=os.path.join(taskdir, task + "_input_functional_bet_mask.nii.gz"),
-                                                        level=0.05,
-                                                        height_control='fdr',
-                                                        cluster_threshold=cthresh)
-    print("Thresholding at FDR-rate corrected threshold of " + str(fdr_threshold))
-    fdr_thresh_img_path = os.path.join(taskdir, task + '_fdr_thresholded_z.nii.gz')
-    nibabel.save(fdr_thresh_img, fdr_thresh_img_path)
+    thresh_img = ''
 
-    # Do a cluster analysis using the FDR corrected threshold on the original z_img #TODO: delete out_size_file
-    cl = fsl.Cluster(in_file=z_img, threshold=fdr_threshold, out_size_file=os.path.join(taskdir, task + "_cluster_sizes.nii.gz"))
-    cl_run = cl.run()
-    clusters = cl_run.runtime.stdout  # write the terminal output to a text file
-    cluster_file = os.path.join(taskdir, task + "_cluster_stats.txt")
-    f = open(cluster_file, 'w')
-    f.write(clusters)
-    f.close()
+    # Thresholding #TODO: condense this code by either picking one method or making it more concise
+    if mcc_method == 'fdr':
+        fdr_thresh_img, fdr_threshold = nistats.thresholding.map_threshold(stat_img=z_img,
+                                                            mask_img=os.path.join(taskdir, task + "_input_functional_bet_mask.nii.gz"),
+                                                            level=0.05,
+                                                            height_control='fdr',
+                                                            cluster_threshold=cthresh)
+        print("Thresholding at FDR-rate corrected threshold of " + str(fdr_threshold))
+        fdr_thresh_img_path = os.path.join(taskdir, task + '_fdr_thresholded_z.nii.gz')
+        nibabel.save(fdr_thresh_img, fdr_thresh_img_path)
 
-    # resample the result image
-    if aroma:
-        thresh_img = fdr_thresh_img_path
+        # Do a cluster analysis using the FDR corrected threshold on the original z_img #TODO: delete out_size_file
+        cl = fsl.Cluster(in_file=z_img, threshold=fdr_threshold, out_size_file=os.path.join(taskdir, task + "_cluster_sizes.nii.gz"))
+        cl_run = cl.run()
+        clusters = cl_run.runtime.stdout  # write the terminal output to a text file
+        cluster_file = os.path.join(taskdir, task + "_cluster_stats.txt")
+        f = open(cluster_file, 'w')
+        f.write(clusters)
+        f.close()
+        # resample the result image
+        if aroma:
+            thresh_img = fdr_thresh_img_path
+        else:
+            print("Resampling thresholded image to MNI space")
+            mni = '/usr/local/fsl/data/standard/MNI152_T1_2mm_brain.nii.gz'  # TODO: change local to share before build
+            resampled_thresh_img = nilearn.image.resample_to_img(fdr_thresh_img_path, mni)
+            thresh_img = os.path.join(taskdir, task + '_fdr_thresholded_z_resample.nii.gz')
+            resampled_thresh_img.to_filename(thresh_img)
+            # threshold to remove artifacts from resampling
+            thr = fsl.Threshold()
+            thr.inputs.in_file = thresh_img
+            thr.inputs.thresh = 0.001
+            thr.inputs.out_file = os.path.join(taskdir, task + '_fdr_thresholded_z_resample_thr.nii.gz')
+            thr.run()
+            thresh_img = thr.inputs.out_file
+    elif mcc_method == 'cluster':
+        # estimate smoothness
+        est = fsl.SmoothEstimate()
+        est.inputs.zstat_file = z_img
+        est.inputs.mask_file = os.path.join(taskdir, task + "_input_functional_bet_mask.nii.gz")
+        est_run = est.run()
+        dlh = est_run.outputs.dlh
+
+        # cluster-wise post-stats thresholding
+        cl = fsl.Cluster()
+        cl.inputs.threshold = 3.0902
+        cl.inputs.in_file = z_img
+        cl.inputs.dlh = dlh
+        cl.inputs.out_threshold_file = os.path.join(taskdir, task + '_cluster_thresholded_z.nii.gz')
+        print('')
+        print('CLUSTER OUTPUT')
+        print('')
+        print(cl.cmdline)
+        cl_res = cl.run()
+        print(cl.cmdline)
+        print('threshold file: ' + cl_res.outputs.threshold_file)
+        # resample the result image
+        if aroma:
+            thresh_img = cl_res.outputs.threshold_file
+        else:
+            print("Resampling thresholded image to MNI space")
+            mni = '/usr/local/fsl/data/standard/MNI152_T1_2mm_brain.nii.gz'  # TODO: change local to share before build
+            resampled_thresh_img = nilearn.image.resample_to_img(cl_res.outputs.threshold_file, mni)
+            thresh_img = os.path.join(taskdir, task + '_fdr_thresholded_z_resample.nii.gz')
+            resampled_thresh_img.to_filename(thresh_img)
+            # threshold to remove artifacts from resampling
+            thr = fsl.Threshold()
+            thr.inputs.in_file = thresh_img
+            thr.inputs.thresh = 0.001
+            thr.inputs.out_file = os.path.join(taskdir, task + '_fdr_thresholded_z_resample_thr.nii.gz')
+            thr.run()
+            thresh_img = thr.inputs.out_file
     else:
-        print("Resampling thresholded image to MNI space")
-        mni = '/usr/local/fsl/data/standard/MNI152_T1_2mm_brain.nii.gz'  # TODO: change local to share before build
-        resampled_thresh_img = nilearn.image.resample_to_img(fdr_thresh_img_path, mni)
-        thresh_img = os.path.join(taskdir, task + '_fdr_thresholded_z_resample.nii.gz')
-        resampled_thresh_img.to_filename(thresh_img)
-        # threshold to remove artifacts from resampling
-        thr = fsl.Threshold()
-        thr.inputs.in_file = thresh_img
-        thr.inputs.thresh = 0.001
-        thr.inputs.out_file = os.path.join(taskdir, task + '_fdr_thresholded_z_resample_thr.nii.gz')
-        thr.run()
-        thresh_img = thr.inputs.out_file
+        print("Unrecognized thresholding method. Exiting...")
+        exit(1)
 
     print("Image to be returned: " + thresh_img)
 
@@ -334,13 +377,17 @@ def get_parser():
     parser.add_argument(
         "--fwhm",
         help="size of smoothing kernel",
-        type=int,
-        required=True
+        type=int
     )
     parser.add_argument(
         "--cthresh",
         help="Cluster extent threshold",
-        type=int,
+        type=int
+    )
+    parser.add_argument(
+        "--mcc",
+        help="multiple-comparisons correction method",
+        type=str,
         required=True
     )
 
@@ -438,6 +485,7 @@ task_str = task_arg[0]  # take the string (first and only element of list)
 task_list = task_str.split()  # and split it into a list with a string element for each task
 fwhm = args.fwhm
 cthresh = args.cthresh
+mcc_method = args.mcc
 
 # get the layout object of the BIDS directory
 layout = BIDSLayout(bidsdir)

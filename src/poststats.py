@@ -1,3 +1,10 @@
+#
+# Class for computing statistics related to language lateralization and for generating graphs and figures representing these
+# statistics, which will be bundled into the final HTML report
+#
+#
+#
+
 import matplotlib.pyplot as plt
 import numpy as np
 from nipype.algorithms.confounds import TSNR

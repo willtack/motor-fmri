@@ -6,11 +6,11 @@
 	"maintainer": "Will Tackett <william.tackett@pennmedicine.upenn.edu>",
 	"source": "https://github.com/willtack/presurgical-report",
 	"url": "https://github.com/willtack/presurgical-report",
-	"version": "1.0.3",
+	"version": "1.0.7",
 	"custom": {
 		"gear-builder": {
 			"category": "analysis",
-			"image": "willtack/presurgical-report:1.0.3"
+			"image": "willtack/presurgical-report:1.0.7"
 		},
 		"flywheel": {
 			"suite": "BrainScienceCenter"
@@ -41,7 +41,7 @@
             "default": "fdr",
             "description": "False discovery rate or cluster-wise random field-based thresholding.",
 			"enum":[
-				"FDR",
+				"fdr",
 				"cluster"
 			],
             "type": "string"
