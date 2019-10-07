@@ -22,7 +22,10 @@ docker run -it -v /home/will/Desktop/bids_dataset:/flywheel/v0/bids_dataset \
 
 Then run the main script from inside the container, e.g.:
 ```
-python report.py --bidsdir /flywheel/v0/bids_dataset --fmriprepdir /flywheel/v0/fmriprep --outputdir /flywheel/v0/ --aroma
+python report.py --bidsdir /flywheel/v0/bids_dataset \
+                 --fmriprepdir /flywheel/v0/fmriprep \
+                 --outputdir /flywheel/v0/ \
+                 --aroma
 ```
 
 Usage:
