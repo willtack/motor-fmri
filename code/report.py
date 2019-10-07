@@ -365,7 +365,7 @@ def main():
         subject_id=layout.get(return_type='id', target='subject')[0].strip("[']"),
         task_list=task_list,
         task_number=len(task_list),
-        asym_ratio_eq=os.path.join(currdir, 'imgs', 'asym_ratio_equation.png')))
+        asym_ratio_eq='./imgs/asym_ratio_equation.png'))
 
     # Add the navigation bar at the top
     sections.append(navbar_template.render(
