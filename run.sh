@@ -122,6 +122,7 @@ else
 fi
 
 # Remove report_results directory from container
+rm $(find output -maxdepth 3 -type f | grep cluster_thresholded_z_resample.nii.gz) || echo ""
 rm -rf "${RESULTS_DIR}" || echo "No results directory to delete."
 rm stat_result.json || echo "stat_result.json not found. No need to remove."
 rm tsnr.nii.gz || echo "tsnr.nii.gz not found. No need to remove."
