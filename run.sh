@@ -88,7 +88,7 @@ config_fwhm="$(parse_config 'fwhm')"
 config_cthresh="$(parse_config 'cluster_size_thresh')"
 
 # Run script
-if [[ $config_thresh_method == 'fdr' ]]; then
+if [[ $config_thresh_method == 'FDR' ]]; then
   /usr/local/miniconda/bin/python3 ${CODE_BASE}/report.py --bidsdir "${BIDS_DIR}" \
                                              --fmriprepdir "${FMRIPREP_DIR}" \
                                              --outputdir "${RESULTS_DIR}"    \
