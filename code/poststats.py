@@ -122,7 +122,6 @@ class PostStats:
         tsnr = TSNR()
         tsnr.inputs.in_file = self.img
         tsnr.inputs.mean_file = os.path.join(self.outputdir, self.task, self.task + "_mean_tsnr.nii.gz")
-        tsnr.inputs.stddev_file = os.path.join(self.outputdir, self.task, self.task + "_stddev.nii.gz")
         tsnr_res = tsnr.run()
         mean_tsnr_img = tsnr_res.outputs.mean_file
         stat = fsl.ImageStats(in_file=mean_tsnr_img, op_string=' -M')

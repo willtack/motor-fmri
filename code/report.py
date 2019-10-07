@@ -209,24 +209,19 @@ def model_fitting(source_img, prepped_img, subject_info, task):
         (inputspec, level1design,
          [('interscan_interval', 'interscan_interval'),
           ('session_info', 'session_info'), ('contrasts', 'contrasts'),
-          ('bases', 'bases'), ('model_serial_correlations',
-                               'model_serial_correlations')]),
+          ('bases', 'bases'), ('model_serial_correlations', 'model_serial_correlations')]),
         (inputspec, modelestimate, [('film_threshold', 'threshold'),
                                     ('functional_data', 'in_file')]),
-        (level1design, modelgen, [('fsf_files', 'fsf_file'), ('ev_files',
-                                                              'ev_files')]),
+        (level1design, modelgen, [('fsf_files', 'fsf_file'), ('ev_files', 'ev_files')]),
         (modelgen, modelestimate, [('design_file', 'design_file')]),
         (merge_contrasts, ztopval, [('out', 'in_file')]),
         (ztopval, outputspec, [('out_file', 'pfiles')]),
         (merge_contrasts, outputspec, [('out', 'zfiles')]),
-        (modelestimate, outputspec, [('param_estimates',
-                                      'parameter_estimates'), ('dof_file',
-                                                               'dof_file')]),
+        (modelestimate, outputspec, [('param_estimates', 'parameter_estimates'), ('dof_file', 'dof_file')]),
     ])
 
     modelfit.connect([
-        (modelgen, modelestimate, [('con_file', 'tcon_file'),
-                                   ('fcon_file', 'fcon_file')]),
+        (modelgen, modelestimate, [('con_file', 'tcon_file'), ('fcon_file', 'fcon_file')]),
         (modelestimate, merge_contrasts, [('zstats', 'in1'), ('zfstats', 'in2')]),
         (modelestimate, outputspec, [('copes', 'copes'), ('varcopes', 'varcopes')]),
     ])
@@ -254,16 +249,14 @@ def model_fitting(source_img, prepped_img, subject_info, task):
     res = modelfit.run()
 
     # outputs
-    print('--------------------nodes------------------')
-    print(list(res.nodes))
+    f = open(os.path.join(taskdir, task + '_outputs.txt'), 'w')
+    print('', file=f)
+    print(list(res.nodes), file=f)
+    print('', file=f)
     for i in range(len(list(res.nodes)) - 1):
-        print('---------------------------')
-        print("%s: %s %s" % ("| NODE", list(res.nodes)[i], '|'))
-        print('---------------------------')
-        print('')
-        print('----------outputs-----------')
-        print(list(res.nodes)[i].result.outputs)
-        print('')
+        print("%s: %s" % ("NODE", list(res.nodes)[i]), file=f)
+        print(list(res.nodes)[i].result.outputs, file=f)
+        print('', file=f)
 
     # the third node, FILM's, first element (i.e. only element) of its 'zstats' output
     z_img = list(res.nodes)[2].result.outputs.zstats[0]
@@ -277,7 +270,7 @@ def model_fitting(source_img, prepped_img, subject_info, task):
     fdr_thresh_img_path = os.path.join(taskdir, task + '_fdr_thresholded_z.nii.gz')
     nibabel.save(fdr_thresh_img, fdr_thresh_img_path)
 
-    # Do a cluster analysis using the FDR corrected threshold on the original z_img
+    # Do a cluster analysis using the FDR corrected threshold on the original z_img #TODO: delete out_size_file
     cl = fsl.Cluster(in_file=z_img, threshold=fdr_threshold, out_size_file=os.path.join(taskdir, task + "_cluster_sizes.nii.gz"))
     cl_run = cl.run()
     clusters = cl_run.runtime.stdout  # write the terminal output to a text file
