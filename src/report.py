@@ -24,7 +24,8 @@ import nistats
 from nistats import thresholding
 from nipype.interfaces.base import Bunch
 from jinja2 import FileSystemLoader, Environment
-from src.poststats import PostStats
+from src import poststats
+#import poststats
 import argparse
 import nibabel
 
@@ -53,8 +54,9 @@ def setup(taskname, source_img, run_number):
         confounds = ''
         aroma = True
     else:
-        print("Could not find confounds file or AROMA-denoised image. Ending script.")
-        exit(1)
+        print("Could not find confounds file or AROMA-denoised image."
+              " Using simplest design matrix. WARNING: resulting maps will be noisy.")
+        raise FileNotFoundError
 
     if aroma:
         print("AROMA config selected. Using ICA-AROMA denoised image.")
@@ -287,7 +289,7 @@ def model_fitting(source_img, prepped_img, subject_info, task):
             thresh_img = fdr_thresh_img_path
         else:
             print("Resampling thresholded image to MNI space")
-            mni = '/usr/local/fsl/data/standard/MNI152_T1_2mm_brain.nii.gz'  # TODO: change local to share before build
+            mni = '/usr/share/fsl/data/standard/MNI152_T1_2mm_brain.nii.gz'  # TODO: change local to share before build
             resampled_thresh_img = nilearn.image.resample_to_img(fdr_thresh_img_path, mni)
             thresh_img = os.path.join(taskdir, task + '_fdr_thresholded_z_resample.nii.gz')
             resampled_thresh_img.to_filename(thresh_img)
@@ -412,7 +414,7 @@ def main():
         subject_id=layout.get(return_type='id', target='subject')[0].strip("[']"),
         task_list=task_list,
         task_number=len(task_list),
-        asym_ratio_eq='./imgs/asym_ratio_equation.png'))
+        asym_ratio_eq='imgs/asym_ratio_equation.png'))
 
     # Add the navigation bar at the top
     sections.append(navbar_template.render(
@@ -426,7 +428,11 @@ def main():
         for i in range(0, len(run_list)):
             source_img = run_list[i]
             run_number = "0" + str(i + 1)
-            (source_epi, input_functional, info, confounds) = setup(task, source_img, run_number)
+            try:
+                (source_epi, input_functional, info, confounds) = setup(task, source_img, run_number)
+            except FileNotFoundError:
+                continue
+
             thresholded_img = model_fitting(source_epi, input_functional, info, task)
             if task == 'object':
                 rois = ['whole brain', "broca's area"]
@@ -446,7 +452,7 @@ def main():
                 masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lsfg_mask, rsfg_mask]
 
             # create a PostStats object for the current task. Add elements to the section based on the object's methods
-            post_stats = PostStats(thresholded_img, task, rois, masks, confounds, outputdir, datadir)
+            post_stats = poststats.PostStats(thresholded_img, task, rois, masks, confounds, outputdir, datadir)
             sections.append(task_section_template.render(
                 section_name="ses-01_task-" + task + "_run-" + run_number,  # the link that IDs this section for the nav bar
                 task_title=task,
