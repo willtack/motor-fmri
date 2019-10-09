@@ -37,15 +37,6 @@
             "description": "Save the files from the model fitting workflow.",
             "type": "boolean"
         },
-		"thresh_method":{
-            "default": "fdr",
-            "description": "False discovery rate or cluster-wise random field-based thresholding.",
-			"enum":[
-				"fdr",
-				"cluster"
-			],
-            "type": "string"
-        },
 		"fwhm":{
             "default": "8",
             "description": "Size of smoothing kernel",
