@@ -24,8 +24,8 @@ import nistats
 from nistats import thresholding
 from nipype.interfaces.base import Bunch
 from jinja2 import FileSystemLoader, Environment
-from src import poststats
-#import poststats
+# from src import poststats
+import poststats
 import argparse
 import nibabel
 
@@ -46,19 +46,25 @@ def setup(taskname, source_img, run_number):
                                    'session'] + "_task-" + taskname + "_run-" + run_number +
                                    "_space-MNI152NLin2009cAsym_desc-smoothAROMAnonaggr_bold.nii.gz")
 
+    simple_design = False
+    confounds=''
+
+    # Always use AROMA-denoised images for the scenemem task (if they're there)
+    if taskname=='scenemem' and os.path.isfile(aroma_path):
+        aroma = True
+
     if os.path.isfile(confounds_path):
         print("Found confounds tsv at %s" % confounds_path)
         confounds = pd.read_csv(confounds_path, sep="\t", na_values="n/a")
     elif not os.path.isfile(confounds_path) and os.path.isfile(aroma_path):
         print("Confounds file not found...using AROMA-denoised image")
-        confounds = ''
         aroma = True
     else:
         print("Could not find confounds file or AROMA-denoised image."
               " Using simplest design matrix. WARNING: resulting maps will be noisy.")
-        raise FileNotFoundError
+        simple_design = True
 
-    if aroma:
+    if aroma and os.path.isfile(aroma_path): # if AROMA config selected and the images exist
         print("AROMA config selected. Using ICA-AROMA denoised image.")
         subject_info = [Bunch(conditions=[taskname],
                               onsets=[list(events[events.trial_type == 'stimulus'].onset)],
@@ -70,44 +76,50 @@ def setup(taskname, source_img, run_number):
                                    'session'] + "_task-" + taskname + "_run-" + run_number +
                                    "_space-MNI152NLin2009cAsym_desc-smoothAROMAnonaggr_bold.nii.gz")
     else:
-        subject_info = [Bunch(conditions=[taskname],
-                              onsets=[list(events[events.trial_type == 'stimulus'].onset),
-                                      list(events[events.trial_type == 'baseline'].onset)],
-                              durations=[list(events[events.trial_type == 'stimulus'].duration),
-                                         list(events[events.trial_type == 'baseline'].duration)],
-                              regressors=[confounds['global_signal'],
-                                          confounds['csf'],
-                                          confounds['white_matter'],
-                                          confounds['a_comp_cor_00'],
-                                          confounds['a_comp_cor_01'],
-                                          confounds['a_comp_cor_02'],
-                                          confounds['a_comp_cor_03'],
-                                          confounds['a_comp_cor_04'],
-                                          confounds['a_comp_cor_05'],
-                                          confounds['trans_x'],
-                                          confounds['trans_y'],
-                                          confounds['trans_z'],
-                                          confounds['rot_x'],
-                                          confounds['rot_y'],
-                                          confounds['rot_z'],
-                                          ],
-                              regressor_names=['global_signal',
-                                               'csf',
-                                               'white_matter',
-                                               'a_comp_cor_00',
-                                               'a_comp_cor_01',
-                                               'a_comp_cor_02',
-                                               'a_comp_cor_03',
-                                               'a_comp_cor_04',
-                                               'a_comp_cor_05',
-                                               'trans_x',
-                                               'trans_y',
-                                               'trans_z',
-                                               'rot_x',
-                                               'rot_y',
-                                               'rot_z'
-                                               ]
-                              )]
+        if simple_design:
+            subject_info = [Bunch(conditions=[taskname],
+                                  onsets=[list(events[events.trial_type == 'stimulus'].onset),
+                                          list(events[events.trial_type == 'baseline'].onset)],
+                                  durations=[list(events[events.trial_type == 'stimulus'].duration),
+                                             list(events[events.trial_type == 'baseline'].duration)])]
+        else:
+            subject_info = [Bunch(conditions=[taskname],
+                                  onsets=[list(events[events.trial_type == 'stimulus'].onset),
+                                          list(events[events.trial_type == 'baseline'].onset)],
+                                  durations=[list(events[events.trial_type == 'stimulus'].duration),
+                                             list(events[events.trial_type == 'baseline'].duration)],
+                                  regressors=[confounds['global_signal'],
+                                              confounds['csf'],
+                                              confounds['white_matter'],
+                                              confounds['a_comp_cor_00'],
+                                              confounds['a_comp_cor_01'],
+                                              confounds['a_comp_cor_02'],
+                                              confounds['a_comp_cor_03'],
+                                              confounds['a_comp_cor_04'],
+                                              confounds['a_comp_cor_05'],
+                                              confounds['trans_x'],
+                                              confounds['trans_y'],
+                                              confounds['trans_z'],
+                                              confounds['rot_x'],
+                                              confounds['rot_y'],
+                                              confounds['rot_z'],
+                                              ],
+                                  regressor_names=['global_signal',
+                                                   'csf',
+                                                   'white_matter',
+                                                   'a_comp_cor_00',
+                                                   'a_comp_cor_01',
+                                                   'a_comp_cor_02',
+                                                   'a_comp_cor_03',
+                                                   'a_comp_cor_04',
+                                                   'a_comp_cor_05',
+                                                   'trans_x',
+                                                   'trans_y',
+                                                   'trans_z',
+                                                   'rot_x',
+                                                   'rot_y',
+                                                   'rot_z'
+                                                   ])]
 
         prepped_img = os.path.join(fmriprepdir, "sub-" + source_img.entities['subject'],
                                    "ses-" + source_img.entities['session'], "func",
@@ -263,83 +275,40 @@ def model_fitting(source_img, prepped_img, subject_info, task):
     # the third node, FILM's, first element (i.e. only element) of its 'zstats' output
     z_img = list(res.nodes)[2].result.outputs.zstats[0]
 
-    thresh_img = ''
+    # Use False Discovery Rate theory to correct for multiple comparisons
+    fdr_thresh_img, fdr_threshold = nistats.thresholding.map_threshold(stat_img=z_img,
+                                                        mask_img=os.path.join(taskdir, task + "_input_functional_bet_mask.nii.gz"),
+                                                        level=0.05,
+                                                        height_control='fdr',
+                                                        cluster_threshold=cthresh)
+    print("Thresholding at FDR-rate corrected threshold of " + str(fdr_threshold))
+    fdr_thresh_img_path = os.path.join(taskdir, task + '_fdr_thresholded_z.nii.gz')
+    nibabel.save(fdr_thresh_img, fdr_thresh_img_path)
 
-    # Thresholding #TODO: condense this code by either picking one method or making it more concise
-    if mcc_method == 'fdr':
-        fdr_thresh_img, fdr_threshold = nistats.thresholding.map_threshold(stat_img=z_img,
-                                                            mask_img=os.path.join(taskdir, task + "_input_functional_bet_mask.nii.gz"),
-                                                            level=0.05,
-                                                            height_control='fdr',
-                                                            cluster_threshold=cthresh)
-        print("Thresholding at FDR-rate corrected threshold of " + str(fdr_threshold))
-        fdr_thresh_img_path = os.path.join(taskdir, task + '_fdr_thresholded_z.nii.gz')
-        nibabel.save(fdr_thresh_img, fdr_thresh_img_path)
-
-        # Do a cluster analysis using the FDR corrected threshold on the original z_img #TODO: delete out_size_file
-        cl = fsl.Cluster(in_file=z_img, threshold=fdr_threshold, out_size_file=os.path.join(taskdir, task + "_cluster_sizes.nii.gz"))
-        cl_run = cl.run()
-        clusters = cl_run.runtime.stdout  # write the terminal output to a text file
-        cluster_file = os.path.join(taskdir, task + "_cluster_stats.txt")
-        f = open(cluster_file, 'w')
-        f.write(clusters)
-        f.close()
-        # resample the result image
-        if aroma:
-            thresh_img = fdr_thresh_img_path
-        else:
-            print("Resampling thresholded image to MNI space")
-            mni = '/usr/share/fsl/data/standard/MNI152_T1_2mm_brain.nii.gz'  # TODO: change local to share before build
-            resampled_thresh_img = nilearn.image.resample_to_img(fdr_thresh_img_path, mni)
-            thresh_img = os.path.join(taskdir, task + '_fdr_thresholded_z_resample.nii.gz')
-            resampled_thresh_img.to_filename(thresh_img)
-            # threshold to remove artifacts from resampling
-            thr = fsl.Threshold()
-            thr.inputs.in_file = thresh_img
-            thr.inputs.thresh = 0.001
-            thr.inputs.out_file = os.path.join(taskdir, task + '_fdr_thresholded_z_resample_thr.nii.gz')
-            thr.run()
-            thresh_img = thr.inputs.out_file
-    elif mcc_method == 'cluster':
-        # estimate smoothness
-        est = fsl.SmoothEstimate()
-        est.inputs.zstat_file = z_img
-        est.inputs.mask_file = os.path.join(taskdir, task + "_input_functional_bet_mask.nii.gz")
-        est_run = est.run()
-        dlh = est_run.outputs.dlh
-
-        # cluster-wise post-stats thresholding
-        cl = fsl.Cluster()
-        cl.inputs.threshold = 3.0902
-        cl.inputs.in_file = z_img
-        cl.inputs.dlh = dlh
-        cl.inputs.out_threshold_file = os.path.join(taskdir, task + '_cluster_thresholded_z.nii.gz')
-        print('')
-        print('CLUSTER OUTPUT')
-        print('')
-        print(cl.cmdline)
-        cl_res = cl.run()
-        print(cl.cmdline)
-        print('threshold file: ' + cl_res.outputs.threshold_file)
-        # resample the result image
-        if aroma:
-            thresh_img = cl_res.outputs.threshold_file
-        else:
-            print("Resampling thresholded image to MNI space")
-            mni = '/usr/local/fsl/data/standard/MNI152_T1_2mm_brain.nii.gz'  # TODO: change local to share before build
-            resampled_thresh_img = nilearn.image.resample_to_img(cl_res.outputs.threshold_file, mni)
-            thresh_img = os.path.join(taskdir, task + '_fdr_thresholded_z_resample.nii.gz')
-            resampled_thresh_img.to_filename(thresh_img)
-            # threshold to remove artifacts from resampling
-            thr = fsl.Threshold()
-            thr.inputs.in_file = thresh_img
-            thr.inputs.thresh = 0.001
-            thr.inputs.out_file = os.path.join(taskdir, task + '_fdr_thresholded_z_resample_thr.nii.gz')
-            thr.run()
-            thresh_img = thr.inputs.out_file
+    # Do a cluster analysis using the FDR corrected threshold on the original z_img
+    cl = fsl.Cluster(in_file=z_img, threshold=fdr_threshold)
+    cl_run = cl.run()
+    clusters = cl_run.runtime.stdout  # write the terminal output to a text file
+    cluster_file = os.path.join(taskdir, task + "_cluster_stats.txt")
+    f = open(cluster_file, 'w')
+    f.write(clusters)
+    f.close()
+    # resample the result image
+    if aroma:
+        thresh_img = fdr_thresh_img_path
     else:
-        print("Unrecognized thresholding method. Exiting...")
-        exit(1)
+        print("Resampling thresholded image to MNI space")
+        mni = '/usr/share/fsl/data/standard/MNI152_T1_2mm_brain.nii.gz'  # TODO: change local to share before build
+        resampled_thresh_img = nilearn.image.resample_to_img(fdr_thresh_img_path, mni)
+        thresh_img = os.path.join(taskdir, task + '_fdr_thresholded_z_resample_1.nii.gz')
+        resampled_thresh_img.to_filename(thresh_img)
+        # threshold to remove artifacts from resampling
+        thr = fsl.Threshold()
+        thr.inputs.in_file = thresh_img
+        thr.inputs.thresh = 0.001
+        thr.inputs.out_file = os.path.join(taskdir, task + '_fdr_thresholded_z_resample.nii.gz')
+        thr.run()
+        thresh_img = thr.inputs.out_file
 
     print("Image to be returned: " + thresh_img)
 
@@ -385,12 +354,6 @@ def get_parser():
         "--cthresh",
         help="Cluster extent threshold",
         type=int
-    )
-    parser.add_argument(
-        "--mcc",
-        help="multiple-comparisons correction method",
-        type=str,
-        required=True
     )
 
     return parser
@@ -491,7 +454,6 @@ task_str = task_arg[0]  # take the string (first and only element of list)
 task_list = task_str.split()  # and split it into a list with a string element for each task
 fwhm = args.fwhm
 cthresh = args.cthresh
-mcc_method = args.mcc
 
 # get the layout object of the BIDS directory
 layout = BIDSLayout(bidsdir)
