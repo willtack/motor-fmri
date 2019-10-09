@@ -4,7 +4,6 @@ MAINTAINER Will Tackett <william.tackett@pennmedicine.upenn.edu>
 # Make directory for flywheel spec (v0)
 ENV FLYWHEEL /flywheel/v0
 RUN mkdir -p ${FLYWHEEL}
-COPY manifest.json ${FLYWHEEL}/manifest.json
 
 # Set the entrypoint
 ENTRYPOINT ["/flywheel/v0/run.sh"]
@@ -95,6 +94,7 @@ RUN pip install --no-cache fw-heudiconv \
     && pip install --no-cache nibabel \
     && pip install --no-cache nistats
 
+COPY manifest.json ${FLYWHEEL}/manifest.json
 COPY run.sh /flywheel/v0/run.sh
 COPY . /flywheel/v0/
 RUN chmod +x ${FLYWHEEL}/*
