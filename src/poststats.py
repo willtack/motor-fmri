@@ -33,12 +33,12 @@ class PostStats:
 
     def create_glass_brain(self):
         if self.task == 'scenemem':
-            masked_img_path = os.path.join(self.taskdir, self.task + "_img_masked.nii.gz")
-            applymask = fsl.ApplyMask(in_file=self.img, mask_file=self.mtl_mask, out_file=masked_img_path)
-            applymask.run()
-            nilearn.plotting.plot_glass_brain(masked_img_path,
+            # masked_img_path = os.path.join(self.taskdir, self.task + "_img_masked.nii.gz")
+            # applymask = fsl.ApplyMask(in_file=self.img, mask_file=self.mtl_mask, out_file=masked_img_path)
+            # applymask.run()
+            nilearn.plotting.plot_glass_brain(nilearn.image.smooth_img(self.img, 4),
                                               output_file=os.path.join(self.outputdir, self.task, self.task + "_gb.svg"),
-                                              display_mode='lyrz', colorbar=True, plot_abs=False, threshold=1.5)
+                                              display_mode='lyrz', colorbar=True, plot_abs=False, threshold=0)
         else:
             nilearn.plotting.plot_glass_brain(nilearn.image.smooth_img(self.img, 4),
                                               output_file=os.path.join(self.outputdir, self.task, self.task + "_gb.svg"),
