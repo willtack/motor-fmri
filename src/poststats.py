@@ -42,7 +42,7 @@ class PostStats:
         else:
             nilearn.plotting.plot_glass_brain(nilearn.image.smooth_img(self.img, 4),
                                               output_file=os.path.join(self.outputdir, self.task, self.task + "_gb.svg"),
-                                              display_mode='lyrz', colorbar=True, plot_abs=False, threshold=3.5)
+                                              display_mode='lyrz', colorbar=True, plot_abs=False, threshold=2.5)
 
         out_file = "./" + self.task + "/" + self.task + "_gb.svg"
         return out_file
@@ -121,6 +121,7 @@ class PostStats:
         column = ['left %', 'right %', 'asymmetry ratio']
         data = np.array([self.left_stats, self.right_stats, self.ars]).transpose()
         df = pd.DataFrame(data, index=row, columns=column)
+        df.to_csv(os.path.join(self.outputdir, self.task, self.task + "_stats.csv"))
         html_table = df.to_html()
         return html_table
 
@@ -135,7 +136,7 @@ class PostStats:
         stat_run = stat.run()
         mean_tsnr = stat_run.outputs.out_stat
         # framewise-displacement
-        if type(self.confounds) == str:  # test that confounds is the pd tsv, not the empty string
+        if type(self.confounds) == str:  # ensure self.confounds doesn't refer to empty string
             mean_fd = 'n/a'
         else:
             column_means = self.confounds.mean(axis=0, skipna=True)
