@@ -1,16 +1,16 @@
 {
 	"name": "presurgical-report",
 	"label": "Presurgical Report Generator",
-	"description": "Generates a report from an fmri scan of an epilepsy patient",
+	"description": "presurgical-report is a program for automatically generating a report summarizing the results of a patients' presurgical fMRI. It takes the results of fMRIPrep as input and compiles activation maps and ROI statistics into an html report. It was originally designed for epilepsy patients who receive an fMRI to lateralize language function prior to surgery.",
 	"author": "Brain Science Center, University of Pennsylvania",
 	"maintainer": "Will Tackett <william.tackett@pennmedicine.upenn.edu>",
 	"source": "https://github.com/willtack/presurgical-report",
 	"url": "https://github.com/willtack/presurgical-report",
-	"version": "1.0.7",
+	"version": "1.0.9",
 	"custom": {
 		"gear-builder": {
 			"category": "analysis",
-			"image": "willtack/presurgical-report:1.0.7"
+			"image": "willtack/presurgical-report:1.0.9"
 		},
 		"flywheel": {
 			"suite": "BrainScienceCenter"
