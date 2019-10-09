@@ -1,11 +1,11 @@
 # presurgical-report
 *started August 13, 2019*
 
-presurgical-report is a nipype-based program for automatically generating a report of a patients' presurgical fMRI. The report contains resulting activation maps and ROI statistics. It was originally designed for presurgical epilepsy patients who receive an fMRI to lateralize language function. 
+presurgical-report is a python-based program for automatically generating an html report summarizing the results of a patients' presurgical fMRI. The report contains resulting activation maps and ROI statistics. It was originally designed for epilepsy patients who receive an fMRI to lateralize language function prior to surgery. 
 
 The algorithm is Dockerized with the intent of turning it into a gear for the Flywheel neuroinformatics platform. 
 
-The program takes a BIDs dataset and fMRIPREP results as inputs. It does a general linear model (GLM) analysis of the preprocessed BOLD time series images to create activation maps using FSL commands wrapped in nipype. It does a general linear model (GLM) analysis of the preprocessed BOLD time series images to create activation maps using FSL commands wrapped in nipype, then calculates laterality statistics in language ROIs informed by the ASFNR white paper: http://www.ajnr.org/content/38/10/E65. From these results, it generates an html report using jinja-based templating. 
+The program takes a BIDs dataset and fMRIPREP results as inputs.It does a general linear model (GLM) analysis of the preprocessed BOLD time series images to create activation maps using FSL commands wrapped in nipype, then calculates laterality statistics in language ROIs informed by the ASFNR white paper: http://www.ajnr.org/content/38/10/E65. From these results, it generates an html report using jinja-based templating. 
 
 It is designed to run on Flywheel, but it can be run locally with Docker.
 
@@ -22,7 +22,10 @@ docker run -it -v /home/will/Desktop/bids_dataset:/flywheel/v0/bids_dataset \
 
 Then run the main script from inside the container, e.g.:
 ```
-python report.py --bidsdir /flywheel/v0/bids_dataset --fmriprepdir /flywheel/v0/fmriprep --outputdir /flywheel/v0/ --aroma
+python report.py --bidsdir /flywheel/v0/bids_dataset \
+                 --fmriprepdir /flywheel/v0/fmriprep \
+                 --outputdir /flywheel/v0/ \
+                 --aroma
 ```
 
 Usage:
