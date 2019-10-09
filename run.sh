@@ -12,11 +12,36 @@ OUTPUT_DIR=${FLYWHEEL_BASE}/output
 mkdir -p ${OUTPUT_DIR}
 CONTAINER='[flywheel/presurgicalreport]'
 
-error_exit()
+function error_exit()
 {
 	echo "$@" 1>&2
 	exit 1
 }
+# Parse configuration
+function parse_config {
+  CONFIG_FILE=$FLYWHEEL_BASE/config.json
+  MANIFEST_FILE=$FLYWHEEL_BASE/manifest.json
+
+  if [[ -f $CONFIG_FILE ]]; then
+    echo "$(cat $CONFIG_FILE | jq -r '.config.'"$1")"
+  else
+    CONFIG_FILE=$MANIFEST_FILE
+    echo "$(cat $MANIFEST_FILE | jq -r '.config.'"$1"'.default')"
+  fi
+}
+function cleanup {
+  # Remove intermediary files (make config?)
+  if [[ "$config_intermediary" == 'false' ]]; then
+    rm -r $(find output -maxdepth 3 -type d | grep modelfit) || echo "No intermediary files to delete."
+  else
+    echo "Saving intermediary files from modelfitting workflow."
+  fi
+  # Remove report_results directory and other from container
+  rm $(find ${RESULTS_DIR} -maxdepth 3 -type f | grep _resample_1.nii.gz) || echo "Resampled image not found. No need to remove."
+  rm $(find ${RESULTS_DIR} -maxdepth 3 -type f | grep _bet_mask.nii.gz) || echo "Mask image not found. No need to remove."
+  rm $(find ${RESULTS_DIR} -maxdepth 3 -type f | grep _tsnr.nii.gz) || echo "mean_tsnr.nii.gz not found. No need to remove."
+}
+
 
 # CREATE A BIDS FORMATTED DIRECTORY
 #   Use fw-heudiconv to accomplish this task
@@ -57,61 +82,33 @@ mkdir -p "${RESULTS_DIR}"
 # Copy imgs/ to results directory
 cp -r ${FLYWHEEL_BASE}/imgs "${RESULTS_DIR}"/
 
-# Parse configuration
-function parse_config {
-
-  CONFIG_FILE=$FLYWHEEL_BASE/config.json
-  MANIFEST_FILE=$FLYWHEEL_BASE/manifest.json
-
-  if [[ -f $CONFIG_FILE ]]; then
-    echo "$(cat $CONFIG_FILE | jq -r '.config.'"$1")"
-  else
-    CONFIG_FILE=$MANIFEST_FILE
-    echo "$(cat $MANIFEST_FILE | jq -r '.config.'"$1"'.default')"
-  fi
-}
-
+# Arg parsing
 config_aroma="$(parse_config 'AROMA')"
-
-if [[ $config_aroma == 'false' ]]; then
-  aroma_FLAG=''
-else
-  aroma_FLAG='--aroma'
-fi
-
 config_intermediary="$(parse_config 'save_intermediary_files')"
-config_thresh_method="$(parse_config 'thresh_method')"
 config_fwhm="$(parse_config 'fwhm')"
 config_cthresh="$(parse_config 'cluster_size_thresh')"
+if [[ $config_aroma == 'false' ]]; then aroma_FLAG=''; else aroma_FLAG='--aroma'; fi
+
 
 # Run script
 /usr/local/miniconda/bin/python3 ${CODE_BASE}/report.py --bidsdir "${BIDS_DIR}" \
                                            --fmriprepdir "${FMRIPREP_DIR}" \
                                            --outputdir "${RESULTS_DIR}"    \
                                            --tasks "${TASK_LIST}"  \
-                                           --mcc "$config_thresh_method" \
                                            --fwhm "$config_fwhm" \
                                            --cthresh "$config_cthresh" \
                                             ${aroma_FLAG} \
                                             || error_exit "$CONTAINER Main script failed! Check traceback above."
 
 
+# Remove unnecessary files
+cleanup
+
 # Position results directory as zip file in /flywheel/v0/output
 zip -r "${SUB_ID}"_report_results.zip "${SUB_ID}"_report_results
 mv "${SUB_ID}"_report_results.zip ${OUTPUT_DIR}/
 
-# Remove intermediary files (make config?)
-if [[ "$config_intermediary" == 'false' ]]; then
-  rm -r $(find output -maxdepth 3 -type d | grep modelfit) || echo "No intermediary files to delete."
-else
-  echo "Saving intermediary files from modelfitting workflow."
-fi
-
-# Remove report_results directory from container
-rm $(find output -maxdepth 3 -type f | grep cluster_thresholded_z_resample.nii.gz) || echo ""
 rm -rf "${RESULTS_DIR}" || echo "No results directory to delete."
-rm stat_result.json || echo "stat_result.json not found. No need to remove."
-rm tsnr.nii.gz || echo "tsnr.nii.gz not found. No need to remove."
 
 echo "Completed analysis and generated report successfully!"
 
