@@ -1,7 +1,7 @@
-# presurgical-report
+# lingua-map
 *started August 13, 2019*
 
-presurgical-report is a python-based program for automatically generating an html report summarizing the results of a patients' presurgical fMRI. The report contains resulting activation maps and ROI statistics. It was originally designed for epilepsy patients who receive an fMRI to lateralize language function prior to surgery. 
+lingua-map is a python-based program for automatically generating an html report summarizing the results of a patients' presurgical fMRI. The report contains resulting activation maps and ROI statistics. It was originally designed for epilepsy patients who receive an fMRI to lateralize language function prior to surgery. 
 
 The algorithm is Dockerized with the intent of turning it into a gear for the Flywheel neuroinformatics platform. 
 
