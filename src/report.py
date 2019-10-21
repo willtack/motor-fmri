@@ -24,6 +24,7 @@ import nistats
 from nistats import thresholding
 from nipype.interfaces.base import Bunch
 from jinja2 import FileSystemLoader, Environment
+from weasyprint import HTML, CSS
 # from src import poststats
 import poststats
 import argparse
@@ -47,7 +48,7 @@ def setup(taskname, source_img, run_number):
                                    "_space-MNI152NLin2009cAsym_desc-smoothAROMAnonaggr_bold.nii.gz")
 
     simple_design = False
-    confounds=''
+    confounds = ''
 
     # Always use AROMA-denoised images for the scenemem task (if they're there)
     if taskname=='scenemem' and os.path.isfile(aroma_path):
@@ -67,8 +68,10 @@ def setup(taskname, source_img, run_number):
     if aroma and os.path.isfile(aroma_path): # if AROMA config selected and the images exist
         print("AROMA config selected. Using ICA-AROMA denoised image.")
         subject_info = [Bunch(conditions=[taskname],
-                              onsets=[list(events[events.trial_type == 'stimulus'].onset)],
-                              durations=[list(events[events.trial_type == 'stimulus'].duration)])]
+                              onsets=[list(events[events.trial_type == 'stimulus'].onset),
+                                      list(events[events.trial_type == 'baseline'].onset)],
+                              durations=[list(events[events.trial_type == 'stimulus'].duration),
+                                         list(events[events.trial_type == 'baseline'].duration)])]
 
         prepped_img = os.path.join(fmriprepdir, "sub-" + source_img.entities['subject'],
                                    "ses-" + source_img.entities['session'], "func",
@@ -146,7 +149,7 @@ def model_fitting(source_img, prepped_img, subject_info, task):
     bet.inputs.mask = True
     bet.inputs.out_file = os.path.join(taskdir, task + "_input_functional_bet.nii.gz")
     bet_res = bet.run()
-    bettedinput = bet_res.outputs.out_file
+    betted_input = bet_res.outputs.out_file
 
     if aroma is True:
         print("No smoothing required.")
@@ -154,7 +157,7 @@ def model_fitting(source_img, prepped_img, subject_info, task):
         # smoothing
         print("Smoothing the skull-stripped BOLD.")
         smooth = fsl.Smooth()
-        smooth.inputs.in_file = bettedinput
+        smooth.inputs.in_file = betted_input
         smooth.inputs.fwhm = fwhm
         smooth.inputs.smoothed_file = os.path.join(taskdir, task + "_input_functional_bet_smooth.nii.gz")
         smooth.run()
@@ -241,8 +244,8 @@ def model_fitting(source_img, prepped_img, subject_info, task):
 
     # define inputs to workflow
     if aroma:
-        modelspec.inputs.functional_runs = bettedinput
-        inputspec.inputs.functional_data = bettedinput
+        modelspec.inputs.functional_runs = betted_input
+        inputspec.inputs.functional_data = betted_input
     else:
         modelspec.inputs.functional_runs = smoothed_betted_input
         inputspec.inputs.functional_data = smoothed_betted_input
@@ -281,7 +284,7 @@ def model_fitting(source_img, prepped_img, subject_info, task):
                                                         level=0.05,
                                                         height_control='fdr',
                                                         cluster_threshold=cthresh)
-    print("Thresholding at FDR-rate corrected threshold of " + str(fdr_threshold))
+    print("Thresholding at FDR corrected threshold of " + str(fdr_threshold))
     fdr_thresh_img_path = os.path.join(taskdir, task + '_fdr_thresholded_z.nii.gz')
     nibabel.save(fdr_thresh_img, fdr_thresh_img_path)
 
@@ -298,8 +301,7 @@ def model_fitting(source_img, prepped_img, subject_info, task):
         thresh_img = fdr_thresh_img_path
     else:
         print("Resampling thresholded image to MNI space")
-        mni = '/usr/share/fsl/data/standard/MNI152_T1_2mm_brain.nii.gz'  # TODO: change local to share before build
-        resampled_thresh_img = nilearn.image.resample_to_img(fdr_thresh_img_path, mni)
+        resampled_thresh_img = nilearn.image.resample_to_img(fdr_thresh_img_path, template)
         thresh_img = os.path.join(taskdir, task + '_fdr_thresholded_z_resample_1.nii.gz')
         resampled_thresh_img.to_filename(thresh_img)
         # threshold to remove artifacts from resampling
@@ -359,11 +361,10 @@ def get_parser():
     return parser
 
 
-def main():
+def generate_report(n):
     """
-    Entry point for the script.
+    Inputs::
     Render a template and write it to file.
-    :return:
     """
 
     # Content to be published
@@ -372,9 +373,14 @@ def main():
     # Produce our section blocks
     sections = list()
 
+    # Subject ID
+    sid = layout.get(return_type='id', target='subject')[0].strip("[']")
+
     # Add the first section, a summary list and legend
     sections.append(summary_section_template.render(
-        subject_id=layout.get(return_type='id', target='subject')[0].strip("[']"),
+        subject_id=sid,
+        fwhm=fwhm,
+        cthresh=cthresh,
         task_list=task_list,
         task_number=len(task_list),
         asym_ratio_eq='imgs/asym_ratio_equation.png'))
@@ -425,8 +431,10 @@ def main():
                 mean_fd=post_stats.calc_iqms()[1],
                 gb_path=post_stats.create_glass_brain(),  # glass brain
                 viewer_path=post_stats.create_html_viewer(),  # interactive statistical map viewer
-                bar_path=post_stats.create_bar_plot(),  # bar plot
-                table=post_stats.generate_statistics_table()  # statistics table
+                vox_bar_path=post_stats.create_vox_bar_plot(),  # bar plots
+                mean_bar_path=post_stats.create_mean_bar_plot(),
+                vox_table=post_stats.generate_vox_statistics_table(),  # statistics tables
+                mean_table=post_stats.generate_mean_statistics_table()
             ))
 
     # Produce and write the report to file
@@ -435,6 +443,15 @@ def main():
             title=title,
             sections=sections
         ))
+    with open(os.path.join(outputdir, "report_png.html"), "w") as f:
+        f.write(base_template.render(
+            title=title,
+            sections=sections
+        ))
+    html = HTML(os.path.join(outputdir, "report_png.html"))
+    css = CSS(string='@page { size: A0 landscape; margin: .25cm }')
+    html.write_pdf(
+        os.path.join(outputdir, "sub-" + sid + "_report.pdf"), stylesheets=[css])
 
 
 fsl.FSLCommand.set_default_output_type('NIFTI_GZ')
@@ -483,6 +500,7 @@ lffg_mask = os.path.join(datadir, "masks", "ffg_left_bin.nii.gz")
 rffg_mask = os.path.join(datadir, "masks", "ffg_right_bin.nii.gz")
 lphg_mask = os.path.join(datadir, "masks", "phg_left_bin.nii.gz")
 rphg_mask = os.path.join(datadir, "masks", "phg_right_bin.nii.gz")
+template = os.path.join(datadir, "masks", "mni152.nii.gz")
 
 # Configure Jinja and ready the templates
 env = Environment(
@@ -496,4 +514,4 @@ task_section_template = env.get_template("task_section.html")
 navbar_template = env.get_template("navbar.html")
 
 if __name__ == "__main__":
-    main()
+    generate_report()
