@@ -1,3 +1,4 @@
+weasyprint
 nibabel
 nistats
 matplotlib
