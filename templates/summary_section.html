@@ -8,6 +8,8 @@
                     <li>{{task}}</li>
                    {% endfor %}
                </ul>
+          <li>FWHM: {{fwhm}}</li>
+          <li>Cluster extent threshold: {{cthresh}}</li>
         </ul>
         <h3> Reference table </h3>
         <table class="table table-striped">
@@ -20,7 +22,7 @@
                     ROI in the left/right side </td>
                 </tr>
                 <tr>
-                    <td>Asymmetry Ratio</td>
+                    <td>Laterality Index (LI)</td>
                     <td><img src={{asym_ratio_eq}}
                     ...where “left activation” = “Left %” (as above)></td>
                 </tr>
