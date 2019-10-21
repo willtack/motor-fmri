@@ -92,7 +92,9 @@ RUN pip install --no-cache fw-heudiconv \
     && pip install --no-cache jinja2 \
     && pip install --no-cache argparse \
     && pip install --no-cache nibabel \
-    && pip install --no-cache nistats
+    && pip install --no-cache nistats \
+    && pip install --no-cache cairocffi \
+    && pip install --no-cache weasyprint
 
 COPY manifest.json ${FLYWHEEL}/manifest.json
 COPY run.sh /flywheel/v0/run.sh
@@ -107,3 +109,5 @@ WORKDIR /flywheel/v0
 
 RUN conda install matplotlib
 RUN conda install scikit-learn
+RUN apt-get install -y libcairo2-dev
+RUN apt-get install -y pango-1.0
