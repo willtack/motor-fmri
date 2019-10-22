@@ -29,23 +29,16 @@ class PostStats:
         self.confounds = confounds  # confounds tsv (returned from setup())
         self.mtl_mask = os.path.join(datadir, "masks", "hpf_bin.nii.gz")
 
-        self.left_stats, self.right_stats, self.ars = self.calc_stats()
+        self.vox_left_stats, self.vox_right_stats, self.vox_ars = self.calc_stats('vox')
+        self.mean_left_stats, self.mean_right_stats, self.mean_ars = self.calc_stats('mean')
 
     def create_glass_brain(self):
-        if self.task == 'scenemem':
-            # masked_img_path = os.path.join(self.taskdir, self.task + "_img_masked.nii.gz")
-            # applymask = fsl.ApplyMask(in_file=self.img, mask_file=self.mtl_mask, out_file=masked_img_path)
-            # applymask.run()
-            nilearn.plotting.plot_glass_brain(nilearn.image.smooth_img(self.img, 4),
-                                              output_file=os.path.join(self.outputdir, self.task, self.task + "_gb.svg"),
-                                              display_mode='lyrz', colorbar=True, plot_abs=False, threshold=0)
-        else:
-            nilearn.plotting.plot_glass_brain(nilearn.image.smooth_img(self.img, 4),
-                                              output_file=os.path.join(self.outputdir, self.task, self.task + "_gb.svg"),
-                                              display_mode='lyrz', colorbar=True, plot_abs=False, threshold=2.5)
+        nilearn.plotting.plot_glass_brain(nilearn.image.smooth_img(self.img, 4),
+                                          output_file=os.path.join(self.outputdir, self.task, self.task + "_gb.svg"),
+                                          display_mode='lyrz', colorbar=True, plot_abs=False, threshold=0)
 
-        out_file = "./" + self.task + "/" + self.task + "_gb.svg"
-        return out_file
+        out_svg = self.task + "/" + self.task + "_gb.svg"
+        return out_svg
 
     def get_mask_vox(self, msk):
         mask_stat = fsl.ImageStats(in_file=msk, op_string=' -V')
@@ -61,69 +54,116 @@ class PostStats:
         perc = (stat / mask_vox) * 100
         return perc
 
+    def get_roi_mean_stat(self, msk):
+        mean_zstat = fsl.ImageStats(in_file=self.img, op_string='-k ' + msk + ' -M')
+        print(mean_zstat.cmdline)
+        stat_run = mean_zstat.run()
+        zscore = float(stat_run.outputs.out_stat)
+        return zscore
+
     def calc_ar(self, left, right):
         if not (left + right) > 0:
             return 0
         else:
             return (left - right) / (left + right)
 
-    def calc_stats(self):
+    def calc_stats(self, mode):
+        """
+        Calculate activation statistics in the current list of ROIs
+        :param mode: do percent activated voxels in  ROI (vox) or the mean z-score in ROI (mean)
+        :return: left_stats: list of statistics in the left hemisphere ROIs
+                 right_stats: list of statistics in the right hemisphere ROIs
+                 ars: list of asymmetry ratios for each ROI
+        """
         masks = self.masks
         vox = {}  # dictionary of mask: mask voxels
         res = {}  # dictionary of roi: percent activation
+        mean = {}  # dictionary of mean z-score in ROI
         left_stats = []  # for plot
         right_stats = []
+
         ars = []  # list of asymmetry ratios for table
         for mask in masks:  # order is important -- it must correspond with the ROI labels (self.rois)
             roi = os.path.basename(mask).split('.')[0]
-            vox[roi + '_vox'] = self.get_mask_vox(mask)
-            res[roi] = round(self.get_roi_perc(mask, vox[roi + '_vox']))
-            if "left" in roi:
-                left_stats.append(res[roi])
+            if mode == 'vox':
+                vox[roi + '_vox'] = self.get_mask_vox(mask)
+                res[roi] = round(self.get_roi_perc(mask, vox[roi + '_vox']))
+                number = res[roi]
+            elif mode == 'mean':
+                mean[roi] = round(self.get_roi_mean_stat(mask), 2)
+                number = mean[roi]
             else:
-                right_stats.append(res[roi])
+                number = -999
+
+            if "left" in roi:
+                left_stats.append(number)
+            else:
+                right_stats.append(number)
+
         for i in range(0, len(left_stats)):
             ar_result = round(self.calc_ar(left_stats[i], right_stats[i]), 2)
             ars.append(ar_result)
 
         return left_stats, right_stats, ars
 
-    def create_bar_plot(self):
+    def create_bar_plot(self, left_stats, right_stats, mode):
         # Bar graph
-        index = np.arange(len(self.left_stats))
+        index = np.arange(len(left_stats))
         bar_width = 0.2
         opacity = 0.8
         axes = plt.gca()
-        axes.set_ylim([0, 100])
+        if mode == 'vox':
+            axes.set_ylim([0, 100])
+        else:
+            axes.set_ylim([0,10])
 
-        plt.bar(index, self.left_stats, bar_width,
+        plt.bar(index, left_stats, bar_width,
                 alpha=opacity,
                 color='#4f6bb0',
                 label='Left')
-        plt.bar(index + bar_width, self.right_stats, bar_width,
+        plt.bar(index + bar_width, right_stats, bar_width,
                 alpha=opacity,
                 color='#550824',
                 label='Right')
 
         plt.xlabel('ROI')
-        plt.ylabel('% activated voxels in ROI')
+        if mode == "vox":
+            plt.ylabel('% activated voxels in ROI')
+        elif mode == "mean":
+            plt.ylabel('mean z-score in ROI')
         plt.title(self.task)
         plt.xticks(index + bar_width / 2, self.rois)
         plt.legend()
-        plt.savefig(os.path.join(self.outputdir, self.task, self.task + "_bar.svg"))
+        plt.savefig(os.path.join(self.outputdir, self.task, self.task + "_" + mode + "_bar.svg"))
         plt.close()
 
-        plot_file = "./" + self.task + "/" + self.task + "_bar.svg"
+        plot_file = "./" + self.task + "/" + self.task + "_" + mode + "_bar.svg"
         return plot_file
 
-    def generate_statistics_table(self):
+    def create_vox_bar_plot(self):
+        return self.create_bar_plot(self.vox_left_stats, self.vox_right_stats, 'vox')
+
+    def create_mean_bar_plot(self):
+        return self.create_bar_plot(self.mean_left_stats, self.mean_right_stats, 'mean')
+
+    def generate_statistics_table(self, left_stats, right_stats, ars, mode):
         row = self.rois
-        column = ['left %', 'right %', 'asymmetry ratio']
-        data = np.array([self.left_stats, self.right_stats, self.ars]).transpose()
+        column = ['left', 'right', 'LI']
+        if mode == 'vox':
+            column = ['left %', 'right %', 'LI']
+        elif mode == 'mean':
+            column = ['left', 'right', 'LI']
+        data = np.array([left_stats, right_stats, ars]).transpose()
         df = pd.DataFrame(data, index=row, columns=column)
-        df.to_csv(os.path.join(self.outputdir, self.task, self.task + "_stats.csv"))
+        df.to_csv(os.path.join(self.outputdir, self.task, self.task + "_" + mode + "_stats.csv"))
         html_table = df.to_html()
         return html_table
+
+    def generate_vox_statistics_table(self):
+        return self.generate_statistics_table(self.vox_left_stats, self.vox_right_stats, self.vox_ars, 'vox')
+
+    def generate_mean_statistics_table(self):
+        return self.generate_statistics_table(self.mean_left_stats, self.mean_right_stats, self.mean_ars, 'mean')
 
     def calc_iqms(self):
         # tSNR

@@ -1,16 +1,15 @@
 {
-	"name": "presurgical-report",
-	"label": "Presurgical Report Generator",
-	"description": "presurgical-report is a program for automatically generating a report summarizing the results of a patients' presurgical fMRI. It takes the results of fMRIPrep as input and compiles activation maps and ROI statistics into an html report. It was originally designed for epilepsy patients who receive an fMRI to lateralize language function prior to surgery.",
+	"name": "presurg",
+	"label": "n",
+	"description": "linguaMap is a gear for analyzing language tasks, particularly in the context of presurgical lateralization. It takes the results of fMRIPrep as input and compiles activation maps and ROI statistics into an html report. It was originally designed for epilepsy patients who receive an fMRI to lateralize language function prior to surgery.",
 	"author": "Brain Science Center, University of Pennsylvania",
 	"maintainer": "Will Tackett <william.tackett@pennmedicine.upenn.edu>",
-	"source": "https://github.com/willtack/presurgical-report",
-	"url": "https://github.com/willtack/presurgical-report",
-	"version": "1.0.9",
+	"source": "https://github.com/willtack/lingua-map",
+	"version": "1.0.13",
 	"custom": {
 		"gear-builder": {
 			"category": "analysis",
-			"image": "willtack/presurgical-report:1.0.9"
+			"image": "willtack/presurgical-report:1.0.13"
 		},
 		"flywheel": {
 			"suite": "BrainScienceCenter"
@@ -38,12 +37,12 @@
             "type": "boolean"
         },
 		"fwhm":{
-            "default": "8",
+            "default": "6",
             "description": "Size of smoothing kernel",
             "type": "integer"
         },
 		"cluster_size_thresh":{
-            "default": "75",
+            "default": "150",
             "description": "Cluster extent threshold",
             "type": "integer"
         }
