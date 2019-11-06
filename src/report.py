@@ -401,27 +401,33 @@ def generate_report():
                 continue
 
             thresholded_img = model_fitting(source_epi, input_functional, info, task)
-            if task == 'object':
-                rois = ['whole brain', "broca's area"]
-                masks = [lhem_mask, rhem_mask, lba_mask, rba_mask]
-            elif task == 'rhyme':
-                rois = ['whole brain', "broca's area", "wernicke's area"]
-                masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lwa_mask, rwa_mask]
-            elif task == 'scenemem':
-                rois = ['mTL', 'hippocampus', 'fusiform gyrus', 'parahippocampal gyrus']
-                masks = [lmtl_mask, rmtl_mask, lhc_mask, rhc_mask, lffg_mask, rffg_mask, lphg_mask, rphg_mask]
-            elif task == 'sentence':
-                rois = ['wb', "ba", "superior TG", "middle TG", "inferior TG"]
-                masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lstg_mask, rstg_mask, lmtg_mask, rmtg_mask, litg_mask,
-                         ritg_mask]
-            elif task == 'wordgen':
-                rois = ['whole brain', "broca's area", "superior frontal gyrus"]
-                masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lsfg_mask, rsfg_mask]
-
-            # create a PostStats object for the current task. Add elements to the section based on the object's methods
-            post_stats = poststats.PostStats(thresholded_img, task, rois, masks, confounds, outputdir, datadir)
 
             def append_task_section(sec_list, is_png):
+                if task == 'object':
+                    rois = ['whole brain', "broca's area"]
+                    masks = [lhem_mask, rhem_mask, lba_mask, rba_mask]
+                elif task == 'rhyme':
+                    rois = ['whole brain', "broca's area", "wernicke's area"]
+                    masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lwa_mask, rwa_mask]
+                elif task == 'scenemem':
+                    if is_png:
+                        rois = ['mTL', 'hippocampus', 'fusiform gyrus', 'phg']
+                    else:
+                        rois = ['mTL', 'hippocampus', 'fusiform gyrus', 'parahippocampal gyrus']
+                    masks = [lmtl_mask, rmtl_mask, lhc_mask, rhc_mask, lffg_mask, rffg_mask, lphg_mask, rphg_mask]
+                elif task == 'sentence':
+                    rois = ['wb', "ba", "superior TG", "middle TG", "inferior TG"]
+                    masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lstg_mask, rstg_mask, lmtg_mask, rmtg_mask, litg_mask,
+                             ritg_mask]
+                elif task == 'wordgen':
+                    if is_png:
+                        rois = ['whole brain', "broca's area", "sfg"]
+                    else:
+                        rois = ['whole brain', "broca's area", "superior frontal gyrus"]
+                    masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lsfg_mask, rsfg_mask]
+
+                # create a PostStats object for the current task. Add elements to the section based on the object's methods
+                post_stats = poststats.PostStats(thresholded_img, task, rois, masks, confounds, outputdir, datadir)
                 sec_list.append(task_section_template.render(
                     section_name="ses-01_task-" + task + "_run-" + run_number,  # the link that IDs this section for the nav bar
                     task_title=task,
@@ -455,7 +461,7 @@ def generate_report():
     css = CSS(string='@page { size: A0 landscape; margin: .25cm }')
     html.write_pdf(
         os.path.join(outputdir, "sub-" + sid + "_report.pdf"), stylesheets=[css])
-    #os.remove(os.path.join(outputdir, "report_png.html"))
+    os.remove(os.path.join(outputdir, "report_png.html"))
 
 
 if __name__ == "__main__":

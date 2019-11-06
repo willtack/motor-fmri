@@ -1,6 +1,3 @@
-{% if task_title == 'scenemem' %}
-    <hr noshade>
-{% endif %}
 <div id={{section_name}} style="margin-top: 75px">
     {% if len_run_list > 1 %}
         <h1 class="run-title">{{task_title}} run {{run_number}}</h1>
@@ -47,4 +44,7 @@
     </div>
     {% endif %}
 </div>
-<div class="page-break"></div>
+
+{% if task_title != 'scenemem' %}
+    <div class="page-break"></div>
+{% endif %}

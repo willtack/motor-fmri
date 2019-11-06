@@ -109,7 +109,6 @@ cp "${RESULTS_DIR}"/"${SUB_ID}"_report.pdf ${OUTPUT_DIR}/
 
 # Copy csv files to output directory for easy download
 out_csv_file="${SUB_ID}_laterality_indices.csv"
-i=0
 for filename in $(find ${RESULTS_DIR} -type f | grep vox | grep .csv); do
   if [ "$filename" != "$out_csv_file" ] ;
    then
@@ -117,7 +116,6 @@ for filename in $(find ${RESULTS_DIR} -type f | grep vox | grep .csv); do
       echo "$task" >>  $out_csv_file
       cat $filename >> $out_csv_file
       echo " " >> $out_csv_file
-      i=$(( $i + 1 ))
   fi
 done
 cp $out_csv_file ${OUTPUT_DIR}/
