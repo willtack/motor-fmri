@@ -5,11 +5,11 @@
 	"author": "Brain Science Center, University of Pennsylvania",
 	"maintainer": "Will Tackett <william.tackett@pennmedicine.upenn.edu>",
 	"source": "https://github.com/willtack/lingua-map",
-	"version": "1.0.14",
+	"version": "1.0.15",
 	"custom": {
 		"gear-builder": {
 			"category": "analysis",
-			"image": "willtack/presurgical-report:1.0.14"
+			"image": "willtack/presurgical-report:1.0.16"
 		},
 		"flywheel": {
 			"suite": "BrainScienceCenter"

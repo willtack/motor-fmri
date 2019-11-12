@@ -53,6 +53,13 @@ def setup(taskname, source_img, run_number):
     if taskname=='scenemem' and os.path.isfile(aroma_path):
         aroma = True
 
+    # Check if AROMA-denoised images exist. If they don't and the aroma config is selected, that's bad news
+    if aroma and not os.path.isfile(aroma_path):
+        print("You selected the AROMA configuration, but no AROMA-denoised images were found."
+              " Using standard preprocessed bold images.")
+        aroma = False
+
+    # Check if confounds files actually exist and what to do if they don't
     if os.path.isfile(confounds_path):
         print("Found confounds tsv at %s" % confounds_path)
         confounds = pd.read_csv(confounds_path, sep="\t", na_values="n/a")
