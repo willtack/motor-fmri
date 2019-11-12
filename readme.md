@@ -10,7 +10,7 @@ The program takes a BIDs dataset and fMRIPREP results as inputs.It does a genera
 It is designed to run on Flywheel, but it can be run locally with [Docker](https://cloud.docker.com/repository/docker/willtack/lingua-map/general).
 
 ```
-docker pull willtack/presurgical-report:latest
+docker pull willtack/lingua-map:latest
 ```
 
 
