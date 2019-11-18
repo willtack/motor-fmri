@@ -55,7 +55,7 @@ class PostStats:
         return perc
 
     def get_roi_mean_stat(self, msk):
-        mean_zstat = fsl.ImageStats(in_file=self.img, op_string='-k ' + msk + ' -M')
+        mean_zstat = fsl.ImageStats(in_file=self.img, op_string='-k ' + msk + ' -m')
         print(mean_zstat.cmdline)
         stat_run = mean_zstat.run()
         zscore = float(stat_run.outputs.out_stat)
