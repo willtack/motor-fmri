@@ -499,7 +499,7 @@ if __name__ == "__main__":
     lhc_mask = os.path.join(datadir, "masks", "hippocampus_left.nii.gz")
     rhc_mask = os.path.join(datadir, "masks", "hippocampus_right.nii.gz")
     lam_mask = os.path.join(datadir, "masks", "amygdala_left.nii.gz")
-    ram_mask = os.path.join(datadir, "masks", "amygdala_left.nii.gz")
+    ram_mask = os.path.join(datadir, "masks", "amygdala_right.nii.gz")
     lphg_mask = os.path.join(datadir, "masks", "phg_left.nii.gz")
     rphg_mask = os.path.join(datadir, "masks", "phg_right.nii.gz")
     template = os.path.join(datadir, "masks", "mni152.nii.gz")
