@@ -411,21 +411,21 @@ def generate_report():
 
             def append_task_section(sec_list, is_png):
                 if task == 'object':
-                    rois = ['whole brain', "broca's area"]
-                    masks = [lhem_mask, rhem_mask, lba_mask, rba_mask]
+                    rois = ['whole brain', "broca's area", "planum temporale"]
+                    masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lpt_mask, rpt_mask]
                 elif task == 'rhyme':
                     rois = ['whole brain', "broca's area", "planum temporale"]
                     masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lpt_mask, rpt_mask]
                 elif task == 'scenemem':
                     if is_png:
-                        rois = ['mTL', 'hippocampus', 'fusiform gyrus', 'phg']
+                        rois = ['mTL', 'hippocampus', 'amygdala', 'phg']
                     else:
                         rois = ['mTL', 'hippocampus', 'amygdala', 'parahippocampal gyrus']
                     masks = [lmtl_mask, rmtl_mask, lhc_mask, rhc_mask, lam_mask, ram_mask, lphg_mask, rphg_mask]
                 elif task == 'sentence':
-                    rois = ['wb', "ba", "superior TG", "middle TG", "inferior TG"]
+                    rois = ['wb', "ba", "sup. TG", "mid. TG", "inf. TG", "planum_temporale"]
                     masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lstg_mask, rstg_mask, lmtg_mask, rmtg_mask, litg_mask,
-                             ritg_mask]
+                             ritg_mask, lpt_mask, rpt_mask]
                 elif task == 'wordgen':
                     if is_png:
                         rois = ['whole brain', "broca's area", "sfg"]
@@ -503,6 +503,7 @@ if __name__ == "__main__":
     lphg_mask = os.path.join(datadir, "masks", "phg_left.nii.gz")
     rphg_mask = os.path.join(datadir, "masks", "phg_right.nii.gz")
     template = os.path.join(datadir, "masks", "mni152.nii.gz")
+
     # Parse command line arguments
     arg_parser = get_parser()
     args = arg_parser.parse_args()

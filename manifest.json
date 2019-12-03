@@ -5,7 +5,7 @@
 	"author": "Brain Science Center, University of Pennsylvania",
 	"maintainer": "Will Tackett <william.tackett@pennmedicine.upenn.edu>",
 	"source": "https://github.com/willtack/lingua-map",
-	"version": "1.1.18",
+	"version": "1.1.19_0.1.4",
 	"custom": {
 		"gear-builder": {
 			"category": "analysis",
