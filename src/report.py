@@ -414,14 +414,14 @@ def generate_report():
                     rois = ['whole brain', "broca's area"]
                     masks = [lhem_mask, rhem_mask, lba_mask, rba_mask]
                 elif task == 'rhyme':
-                    rois = ['whole brain', "broca's area", "wernicke's area"]
-                    masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lwa_mask, rwa_mask]
+                    rois = ['whole brain', "broca's area", "planum temporale"]
+                    masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lpt_mask, rpt_mask]
                 elif task == 'scenemem':
                     if is_png:
                         rois = ['mTL', 'hippocampus', 'fusiform gyrus', 'phg']
                     else:
-                        rois = ['mTL', 'hippocampus', 'fusiform gyrus', 'parahippocampal gyrus']
-                    masks = [lmtl_mask, rmtl_mask, lhc_mask, rhc_mask, lffg_mask, rffg_mask, lphg_mask, rphg_mask]
+                        rois = ['mTL', 'hippocampus', 'amygdala', 'parahippocampal gyrus']
+                    masks = [lmtl_mask, rmtl_mask, lhc_mask, rhc_mask, lam_mask, ram_mask, lphg_mask, rphg_mask]
                 elif task == 'sentence':
                     rois = ['wb', "ba", "superior TG", "middle TG", "inferior TG"]
                     masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lstg_mask, rstg_mask, lmtg_mask, rmtg_mask, litg_mask,
@@ -488,20 +488,20 @@ if __name__ == "__main__":
     ritg_mask = os.path.join(datadir, "masks", "itg_right.nii.gz")
     lsfg_mask = os.path.join(datadir, "masks", "sfg_left.nii.gz")
     rsfg_mask = os.path.join(datadir, "masks", "sfg_right.nii.gz")
-    lwa_mask = os.path.join(datadir, "masks", "stg_post_left.nii.gz")
-    rwa_mask = os.path.join(datadir, "masks", "stg_post_right.nii.gz")
+    lpt_mask = os.path.join(datadir, "masks", "pt_left.nii.gz")
+    rpt_mask = os.path.join(datadir, "masks", "pt_right.nii.gz")
     lhem_mask = os.path.join(datadir, "masks", "hem_left.nii.gz")
     rhem_mask = os.path.join(datadir, "masks", "hem_right.nii.gz")
 
-    mtl_mask = os.path.join(datadir, "masks", "hpf_bin.nii.gz")
-    lmtl_mask = os.path.join(datadir, "masks", "hpf_left_bin.nii.gz")
-    rmtl_mask = os.path.join(datadir, "masks", "hpf_right_bin.nii.gz")
-    lhc_mask = os.path.join(datadir, "masks", "hippocampus_left_bin.nii.gz")
-    rhc_mask = os.path.join(datadir, "masks", "hippocampus_right_bin.nii.gz")
-    lffg_mask = os.path.join(datadir, "masks", "ffg_left_bin.nii.gz")
-    rffg_mask = os.path.join(datadir, "masks", "ffg_right_bin.nii.gz")
-    lphg_mask = os.path.join(datadir, "masks", "phg_left_bin.nii.gz")
-    rphg_mask = os.path.join(datadir, "masks", "phg_right_bin.nii.gz")
+    mtl_mask = os.path.join(datadir, "masks", "mTL.nii.gz")
+    lmtl_mask = os.path.join(datadir, "masks", "mTL_left.nii.gz")
+    rmtl_mask = os.path.join(datadir, "masks", "mTL_right.nii.gz")
+    lhc_mask = os.path.join(datadir, "masks", "hippocampus_left.nii.gz")
+    rhc_mask = os.path.join(datadir, "masks", "hippocampus_right.nii.gz")
+    lam_mask = os.path.join(datadir, "masks", "amygdala_left.nii.gz")
+    ram_mask = os.path.join(datadir, "masks", "amygdala_left.nii.gz")
+    lphg_mask = os.path.join(datadir, "masks", "phg_left.nii.gz")
+    rphg_mask = os.path.join(datadir, "masks", "phg_right.nii.gz")
     template = os.path.join(datadir, "masks", "mni152.nii.gz")
     # Parse command line arguments
     arg_parser = get_parser()
