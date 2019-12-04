@@ -411,27 +411,27 @@ def generate_report():
 
             def append_task_section(sec_list, is_png):
                 if task == 'object':
-                    rois = ['whole brain', "broca's area", "planum temporale"]
-                    masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lpt_mask, rpt_mask]
+                    rois = ['whole brain', "broca's area", "planum temporale", "angular gyrus"]
+                    masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lpt_mask, rpt_mask, lag_mask, rag_mask]
                 elif task == 'rhyme':
-                    rois = ['whole brain', "broca's area", "planum temporale"]
-                    masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lpt_mask, rpt_mask]
+                    rois = ['whole brain', "broca's area", "planum temporale", "angular gyrus"]
+                    masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lpt_mask, rpt_mask, lag_mask, rag_mask]
                 elif task == 'scenemem':
                     if is_png:
-                        rois = ['mTL', 'hippocampus', 'amygdala', 'phg']
+                        rois = ['mTL', 'hippocampus', 'amygdala', 'phg', 'entorhinal']
                     else:
-                        rois = ['mTL', 'hippocampus', 'amygdala', 'parahippocampal gyrus']
-                    masks = [lmtl_mask, rmtl_mask, lhc_mask, rhc_mask, lam_mask, ram_mask, lphg_mask, rphg_mask]
+                        rois = ['mTL', 'hippocampus', 'amygdala', 'parahippocampal gyrus', 'entorhinal cortex']
+                    masks = [lmtl_mask, rmtl_mask, lhc_mask, rhc_mask, lam_mask, ram_mask, lphg_mask, rphg_mask, lent_mask, rent_mask]
                 elif task == 'sentence':
-                    rois = ['wb', "ba", "sup. TG", "mid. TG", "inf. TG", "planum_temporale"]
+                    rois = ['wb', "ba", "sup. TG", "mid. TG", "inf. TG", "pt", "ag"]
                     masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lstg_mask, rstg_mask, lmtg_mask, rmtg_mask, litg_mask,
-                             ritg_mask, lpt_mask, rpt_mask]
+                             ritg_mask, lpt_mask, rpt_mask, lag_mask, rag_mask]
                 elif task == 'wordgen':
                     if is_png:
-                        rois = ['whole brain', "broca's area", "sfg"]
+                        rois = ['whole brain', "broca's area", "sfg", "pt", "ag"]
                     else:
-                        rois = ['whole brain', "broca's area", "superior frontal gyrus"]
-                    masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lsfg_mask, rsfg_mask]
+                        rois = ['whole brain', "broca's area", "superior frontal gyrus", "planum temporale", "angular gyrus"]
+                    masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lsfg_mask, rsfg_mask, lpt_mask, rpt_mask, lag_mask, rag_mask]
 
                 # create a PostStats object for the current task. Add elements to the section based on the object's methods
                 post_stats = poststats.PostStats(thresholded_img, task, rois, masks, confounds, outputdir, datadir)
@@ -502,6 +502,10 @@ if __name__ == "__main__":
     ram_mask = os.path.join(datadir, "masks", "amygdala_right.nii.gz")
     lphg_mask = os.path.join(datadir, "masks", "phg_left.nii.gz")
     rphg_mask = os.path.join(datadir, "masks", "phg_right.nii.gz")
+    lent_mask = os.path.join(datadir, "masks", "ento_left.nii.gz")
+    rent_mask = os.path.join(datadir, "masks", "ento_right.nii.gz")
+    lag_mask = os.path.join(datadir, "masks", "ang_left.nii.gz")
+    rag_mask = os.path.join(datadir, "masks", "ang_right.nii.gz")
     template = os.path.join(datadir, "masks", "mni152.nii.gz")
 
     # Parse command line arguments
