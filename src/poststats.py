@@ -115,7 +115,7 @@ class PostStats:
         if mode == 'vox':
             axes.set_ylim([0, 100])
         else:
-            axes.set_ylim([0,10])
+            axes.set_ylim([0,6])
 
         plt.bar(index, left_stats, bar_width,
                 alpha=opacity,
