@@ -7,9 +7,11 @@ The algorithm is Dockerized with the intent of turning it into a gear for the Fl
 
 The program takes a BIDs dataset and fMRIPREP results as inputs.It does a general linear model (GLM) analysis of the preprocessed BOLD time series images to create activation maps using FSL commands wrapped in nipype, then calculates laterality statistics in language ROIs informed by the ASFNR white paper: http://www.ajnr.org/content/38/10/E65. From these results, it generates an html report using jinja-based templating. 
 
-It is designed to run on Flywheel, but it can be run locally with Docker.
+It is designed to run on Flywheel, but it can be run locally with [Docker](https://cloud.docker.com/repository/docker/willtack/lingua-map/general).
 
-https://cloud.docker.com/repository/docker/willtack/presurgical-report/general
+```
+docker pull willtack/lingua-map:latest
+```
 
 
 For now, run the container like so:
