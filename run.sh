@@ -108,18 +108,15 @@ cleanup
 cp "${RESULTS_DIR}"/"${SUB_ID}"_report.pdf ${OUTPUT_DIR}/
 
 # Copy csv files to output directory for easy download
-out_csv_file="${SUB_ID}_data.csv"
-for filename in $(find ${RESULTS_DIR} -type f | grep vox_stats | grep .csv); do
+out_csv_file="${SUB_ID}_csv.csv"
+for filename in $(find ${RESULTS_DIR} -type f | grep stats | grep .csv); do
   if [ "$filename" != "$out_csv_file" ] ;
    then
-      #task=$(basename "$filename" | cut -d '_' -f 1 )
-      #echo "$task" >>  $out_csv_file
       cat $filename >> $out_csv_file
-      # " " >> $out_csv_file
   fi
 done
-echo $(sed -n '1~2!p' $out_csv_file) > $out_csv_file
-cp $out_csv_file ${OUTPUT_DIR}/
+sed -n '1~2!p' $out_csv_file > "${SUB_ID}_data.csv"
+cp "${SUB_ID}_data.csv" ${OUTPUT_DIR}/
 
 # Position results directory as zip file in /flywheel/v0/output
 zip -r "${SUB_ID}"_report_results.zip "${SUB_ID}"_report_results
