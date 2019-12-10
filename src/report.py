@@ -411,11 +411,11 @@ def generate_report():
 
             def append_task_section(sec_list, is_png):
                 if task == 'object':
-                    rois = ['whole brain', "broca's area", "planum temporale", "angular gyrus"]
-                    masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lpt_mask, rpt_mask, lag_mask, rag_mask]
+                    rois = ['whole brain', "broca's area", "inf. frontal", "mid. frontal", "planum temporale", "angular gyrus"]
+                    masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lifg_mask, rifg_mask, lmfg_mask, rmfg_mask, lpt_mask, rpt_mask, lag_mask, rag_mask]
                 elif task == 'rhyme':
-                    rois = ['whole brain', "broca's area", "planum temporale", "angular gyrus"]
-                    masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lpt_mask, rpt_mask, lag_mask, rag_mask]
+                    rois = ['whole brain', "broca's area", "frontal lobe", "planum temporale", "angular gyrus"]
+                    masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lfront_mask, rfront_mask, lpt_mask, rpt_mask, lag_mask, rag_mask]
                 elif task == 'scenemem':
                     if is_png:
                         rois = ['mTL', 'hippocampus', 'amygdala', 'phg', 'entorhinal']
@@ -428,13 +428,14 @@ def generate_report():
                              ritg_mask, lpt_mask, rpt_mask, lag_mask, rag_mask]
                 elif task == 'wordgen':
                     if is_png:
-                        rois = ['whole brain', "broca's area", "sfg", "pt", "ag"]
+                        rois = ['whole brain', "broca's area", "sfg", "ifg", "front", "pt", "ag"]
                     else:
-                        rois = ['whole brain', "broca's area", "superior frontal gyrus", "planum temporale", "angular gyrus"]
-                    masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lsfg_mask, rsfg_mask, lpt_mask, rpt_mask, lag_mask, rag_mask]
+                        rois = ['whole brain', "broca's area", "superior frontal gyrus", "inferior frontal gyrus", "frontal lobe", "planum temporale", "angular gyrus"]
+                    masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lsfg_mask, rsfg_mask, lifg_mask, rifg_mask, lfront_mask, rfront_mask,
+                             lpt_mask, rpt_mask, lag_mask, rag_mask]
 
                 # create a PostStats object for the current task. Add elements to the section based on the object's methods
-                post_stats = poststats.PostStats(thresholded_img, task, rois, masks, confounds, outputdir, datadir)
+                post_stats = poststats.PostStats(sid, source_img, thresholded_img, task, rois, masks, confounds, outputdir, datadir)
                 sec_list.append(task_section_template.render(
                     section_name="ses-01_task-" + task + "_run-" + run_number,  # the link that IDs this section for the nav bar
                     task_title=task,
@@ -478,6 +479,8 @@ if __name__ == "__main__":
     currdir = os.path.dirname(__file__)
 
     # define the masks
+    lhem_mask = os.path.join(datadir, "masks", "hem_left.nii.gz")
+    rhem_mask = os.path.join(datadir, "masks", "hem_right.nii.gz")
     lba_mask = os.path.join(datadir, "masks", "ba_left.nii.gz")
     rba_mask = os.path.join(datadir, "masks", "ba_right.nii.gz")
     lstg_mask = os.path.join(datadir, "masks", "stg_left.nii.gz")
@@ -489,9 +492,15 @@ if __name__ == "__main__":
     lsfg_mask = os.path.join(datadir, "masks", "sfg_left.nii.gz")
     rsfg_mask = os.path.join(datadir, "masks", "sfg_right.nii.gz")
     lpt_mask = os.path.join(datadir, "masks", "pt_left.nii.gz")
+    lmfg_mask = os.path.join(datadir, "masks", "mfg_left.nii.gz")
+    rmfg_mask = os.path.join(datadir, "masks", "mfg_right.nii.gz")
+    lifg_mask = os.path.join(datadir, "masks", "ifg_left.nii.gz")
+    rifg_mask = os.path.join(datadir, "masks", "ifg_right.nii.gz")
     rpt_mask = os.path.join(datadir, "masks", "pt_right.nii.gz")
-    lhem_mask = os.path.join(datadir, "masks", "hem_left.nii.gz")
-    rhem_mask = os.path.join(datadir, "masks", "hem_right.nii.gz")
+    lag_mask = os.path.join(datadir, "masks", "ang_left.nii.gz")
+    rag_mask = os.path.join(datadir, "masks", "ang_right.nii.gz")
+    rfront_mask = os.path.join(datadir, "masks", "frontal_right.nii.gz")
+    lfront_mask = os.path.join(datadir, "masks", "frontal_left.nii.gz")
 
     mtl_mask = os.path.join(datadir, "masks", "mTL.nii.gz")
     lmtl_mask = os.path.join(datadir, "masks", "mTL_left.nii.gz")
@@ -504,8 +513,7 @@ if __name__ == "__main__":
     rphg_mask = os.path.join(datadir, "masks", "phg_right.nii.gz")
     lent_mask = os.path.join(datadir, "masks", "ento_left.nii.gz")
     rent_mask = os.path.join(datadir, "masks", "ento_right.nii.gz")
-    lag_mask = os.path.join(datadir, "masks", "ang_left.nii.gz")
-    rag_mask = os.path.join(datadir, "masks", "ang_right.nii.gz")
+
     template = os.path.join(datadir, "masks", "mni152.nii.gz")
 
     # Parse command line arguments
@@ -521,7 +529,7 @@ if __name__ == "__main__":
     task_list = task_str.split()  # and split it into a list with a string element for each task
     fwhm = args.fwhm
     cthresh = args.cthresh
-
+    #task_list = ['object','rhyme','scenemem', 'sentence','wordgen']
     # Get the layout object of the BIDS directory
     layout = BIDSLayout(bidsdir)
 
