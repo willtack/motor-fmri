@@ -19,7 +19,9 @@ class PostStats:
     Class to perform analyses on data
     """
 
-    def __init__(self, img, task, rois, masks, confounds, outputdir, datadir):
+    def __init__(self, subject_id, source_img, img, task, rois, masks, confounds, outputdir, datadir):
+        self.subject_id = subject_id
+        self.source_img = source_img.path
         self.img = img
         self.task = task
         self.outputdir = outputdir
@@ -29,8 +31,8 @@ class PostStats:
         self.confounds = confounds  # confounds tsv (returned from setup())
         self.mtl_mask = os.path.join(datadir, "masks", "hpf_bin.nii.gz")
 
-        self.vox_left_stats, self.vox_right_stats, self.vox_ars = self.calc_stats('vox')
-        self.mean_left_stats, self.mean_right_stats, self.mean_ars = self.calc_stats('mean')
+        self.vox_left_stats, self.vox_right_stats,  self.leftns, self.rightns, self.vox_ars, = self.calc_stats('vox')
+        self.mean_left_stats, self.mean_right_stats, self.leftns, self.rightns, self.mean_ars = self.calc_stats('mean')
 
     def create_glass_brain(self):
         nilearn.plotting.plot_glass_brain(nilearn.image.smooth_img(self.img, 4),
@@ -47,12 +49,19 @@ class PostStats:
         return mask_vox[0]
 
     def get_roi_perc(self, msk, mask_vox):
-        roi_stat = fsl.ImageStats(in_file=self.img, op_string='-k ' + msk + ' -V')
+        roi_stat = fsl.ImageStats(in_file=self.img, op_string='-k ' + msk + ' -l 0 -V')
         print(roi_stat.cmdline)
         stat_run = roi_stat.run()
         stat = float(list(stat_run.outputs.out_stat)[0])
         perc = (stat / mask_vox) * 100
         return perc
+
+    def get_roi_activated_vox(self, msk):
+        roi_stat = fsl.ImageStats(in_file=self.img, op_string='-k ' + msk + ' -l 0 -V')
+        print(roi_stat.cmdline)
+        stat_run = roi_stat.run()
+        stat = float(list(stat_run.outputs.out_stat)[0])
+        return stat
 
     def get_roi_mean_stat(self, msk):
         mean_zstat = fsl.ImageStats(in_file=self.img, op_string='-k ' + msk + ' -m')
@@ -78,10 +87,12 @@ class PostStats:
         masks = self.masks
         vox = {}  # dictionary of mask: mask voxels
         res = {}  # dictionary of roi: percent activation
+        n = {} # dictionary of n activated voxels in ROI
         mean = {}  # dictionary of mean z-score in ROI
         left_stats = []  # for plot
         right_stats = []
-
+        leftns = []
+        rightns = []
         ars = []  # list of asymmetry ratios for table
         for mask in masks:  # order is important -- it must correspond with the ROI labels (self.rois)
             roi = os.path.basename(mask).split('.')[0]
@@ -89,22 +100,28 @@ class PostStats:
                 vox[roi + '_vox'] = self.get_mask_vox(mask)
                 res[roi] = round(self.get_roi_perc(mask, vox[roi + '_vox']))
                 number = res[roi]
+
             elif mode == 'mean':
                 mean[roi] = round(self.get_roi_mean_stat(mask), 2)
                 number = mean[roi]
             else:
                 number = -999
 
+            n[roi] = round(self.get_roi_activated_vox(mask))
+            number_of_voxels = n[roi]
+
             if "left" in roi:
                 left_stats.append(number)
+                leftns.append(number_of_voxels)
             else:
                 right_stats.append(number)
+                rightns.append(number_of_voxels)
 
         for i in range(0, len(left_stats)):
             ar_result = round(self.calc_ar(left_stats[i], right_stats[i]), 2)
             ars.append(ar_result)
 
-        return left_stats, right_stats, ars
+        return left_stats, right_stats, leftns, rightns, ars
 
     def create_bar_plot(self, left_stats, right_stats, mode):
         # Bar graph
@@ -148,18 +165,47 @@ class PostStats:
 
     def generate_statistics_table(self, left_stats, right_stats, ars, mode):
         row = self.rois
-        column = ['left', 'right', 'LI']
+        # table for HTML report
+        columns = ['left', 'right', 'LI']
         if mode == 'vox':
-            column = ['left %', 'right %', 'LI']
+            columns = ['left %', 'right %', 'LI']
         elif mode == 'mean':
-            column = ['left', 'right', 'LI']
+            columns = ['left', 'right', 'LI']
         data = np.array([left_stats, right_stats, ars]).transpose()
-        df = pd.DataFrame(data, index=row, columns=column)
-        df.to_csv(os.path.join(self.outputdir, self.task, self.task + "_" + mode + "_stats.csv"))
+        df = pd.DataFrame(data, index=row, columns=columns)
+        df.to_csv(os.path.join(self.outputdir, self.task, self.task + "_" + mode + "_html_table.csv"))
         html_table = df.to_html()
+
         return html_table
 
+    def generate_csv(self, left_stats, right_stats, leftns, rightns, ars):
+        # table for csv output
+        tSNR = self.calc_iqms()[0]
+        FD = self.calc_iqms()[1]
+
+        # Create lists of labels for each region: e.g. hemisphere left %, broca's left %, hemisphere right%, broca's right % etc.
+        column_labels = []
+        left_per = []
+        right_per = []
+        left_n = []
+        right_n = []
+        li_labels = []
+        for region in self.rois:
+            left_per.append(region + ' left %')
+            right_per.append(region + ' right %')
+            left_n.append(region + ' left voxels')
+            right_n.append(region + ' right voxels')
+            li_labels.append(region + ' LI')
+        column_labels = ['subject'] + ['task'] + left_per + right_per + li_labels + left_n + right_n + ['FramewiseDisplacement'] + ['tSNR']
+
+        row = [self.subject_id] + [self.task] + left_stats + right_stats + ars + leftns + rightns + [FD] + [tSNR]
+        data = np.array([row])
+        df = pd.DataFrame(data, columns=column_labels)
+        df.set_index('subject', inplace=True)
+        df.to_csv(os.path.join(self.outputdir, self.task, self.task + "_stats.csv"))
+
     def generate_vox_statistics_table(self):
+        self.generate_csv(self.vox_left_stats, self.vox_right_stats, self.leftns, self.rightns, self.vox_ars)
         return self.generate_statistics_table(self.vox_left_stats, self.vox_right_stats, self.vox_ars, 'vox')
 
     def generate_mean_statistics_table(self):
@@ -168,13 +214,13 @@ class PostStats:
     def calc_iqms(self):
         # tSNR
         tsnr = TSNR()
-        tsnr.inputs.in_file = self.img
+        tsnr.inputs.in_file = self.source_img
         tsnr.inputs.mean_file = os.path.join(self.outputdir, self.task, self.task + "_mean_tsnr.nii.gz")
         tsnr_res = tsnr.run()
         mean_tsnr_img = tsnr_res.outputs.mean_file
         stat = fsl.ImageStats(in_file=mean_tsnr_img, op_string=' -M')
         stat_run = stat.run()
-        mean_tsnr = stat_run.outputs.out_stat
+        mean_tsnr = round(stat_run.outputs.out_stat, 2)
         # framewise-displacement
         if type(self.confounds) == str:  # ensure self.confounds doesn't refer to empty string
             mean_fd = 'n/a'
