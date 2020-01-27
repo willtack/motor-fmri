@@ -30,12 +30,6 @@ function parse_config {
   fi
 }
 function cleanup {
-  # Remove intermediary files (make config?)
-  if [[ "$config_intermediary" == 'false' ]]; then
-    rm -r $(find output -maxdepth 3 -type d | grep modelfit) || echo "No intermediary files to delete."
-  else
-    echo "Saving intermediary files from modelfitting workflow."
-  fi
   # Remove report_results directory and other from container
   rm $(find ${RESULTS_DIR} -maxdepth 3 -type f | grep _resample_1.nii.gz) || echo "Resampled image not found. No need to remove."
   rm $(find ${RESULTS_DIR} -maxdepth 3 -type f | grep _bet_mask.nii.gz) || echo "Mask image not found. No need to remove."
@@ -84,11 +78,10 @@ cp -r ${FLYWHEEL_BASE}/imgs "${RESULTS_DIR}"/
 
 # Arg parsing
 config_aroma="$(parse_config 'AROMA')"
-config_intermediary="$(parse_config 'save_intermediary_files')"
+config_lite="$(parse_config 'light_output')"
 config_fwhm="$(parse_config 'fwhm')"
 config_cthresh="$(parse_config 'cluster_size_thresh')"
 if [[ $config_aroma == 'false' ]]; then aroma_FLAG=''; else aroma_FLAG='--aroma'; fi
-
 
 # Run script
 /usr/local/miniconda/bin/python3 ${CODE_BASE}/report.py --bidsdir "${BIDS_DIR}" \
@@ -109,18 +102,21 @@ cp "${RESULTS_DIR}"/"${SUB_ID}"_report.pdf ${OUTPUT_DIR}/
 
 # Copy csv files to output directory for easy download
 out_csv_file="${SUB_ID}_csv.csv"
-for filename in $(find ${RESULTS_DIR} -type f | grep stats | grep .csv); do
+for filename in $(find ${RESULTS_DIR} -type f | grep data | grep .csv | egrep -v scenemem); do
   if [ "$filename" != "$out_csv_file" ] ;
    then
       cat $filename >> $out_csv_file
   fi
 done
-sed -n '1~2!p' $out_csv_file > "${SUB_ID}_data.csv"
-cp "${SUB_ID}_data.csv" ${OUTPUT_DIR}/
+sed -n '1~2!p' $out_csv_file > "${SUB_ID}_language_data.csv"
+cp "${SUB_ID}_language_data.csv" ${OUTPUT_DIR}/
+cp ${RESULTS_DIR}/scenemem/scenemem_data.csv ${OUTPUT_DIR}/"${SUB_ID}_scenemem_data.csv"
 
 # Position results directory as zip file in /flywheel/v0/output
-zip -r "${SUB_ID}"_report_results.zip "${SUB_ID}"_report_results
-mv "${SUB_ID}"_report_results.zip ${OUTPUT_DIR}/
+if [[ $config_lite == 'false' ]]; then
+  zip -r "${SUB_ID}"_report_results.zip "${SUB_ID}"_report_results
+  mv "${SUB_ID}"_report_results.zip ${OUTPUT_DIR}/
+fi
 
 rm -rf "${RESULTS_DIR}" || echo "No results directory to delete."
 

@@ -19,7 +19,7 @@ class PostStats:
     Class to perform analyses on data
     """
 
-    def __init__(self, subject_id, source_img, img, task, rois, masks, confounds, outputdir, datadir):
+    def __init__(self, subject_id, source_img, img, task, rois, masks, all_rois, all_masks, confounds, outputdir, datadir):
         self.subject_id = subject_id
         self.source_img = source_img.path
         self.img = img
@@ -28,11 +28,14 @@ class PostStats:
         self.taskdir = os.path.join(outputdir, self.task)
         self.rois = rois  # a list of strings used as labels in plot
         self.masks = masks  # masks to do statistics on
+        self.all_rois = all_rois
+        self.all_masks = all_masks
         self.confounds = confounds  # confounds tsv (returned from setup())
         self.mtl_mask = os.path.join(datadir, "masks", "hpf_bin.nii.gz")
 
-        self.vox_left_stats, self.vox_right_stats,  self.leftns, self.rightns, self.vox_ars, = self.calc_stats('vox')
-        self.mean_left_stats, self.mean_right_stats, self.leftns, self.rightns, self.mean_ars = self.calc_stats('mean')
+        self.vox_left_stats, self.vox_right_stats,  self.leftns, self.rightns, self.vox_ars, = self.calc_stats('vox', self.masks)
+        self.mean_left_stats, self.mean_right_stats, self.leftns, self.rightns, self.mean_ars = self.calc_stats('mean', self.masks)
+        self.all_vox_left_stats, self.all_vox_right_stats, self.all_leftns, self.all_rightns, self.all_vox_ars = self.calc_stats('vox', self.all_masks)
 
     def create_glass_brain(self):
         nilearn.plotting.plot_glass_brain(nilearn.image.smooth_img(self.img, 4),
@@ -76,7 +79,7 @@ class PostStats:
         else:
             return (left - right) / (left + right)
 
-    def calc_stats(self, mode):
+    def calc_stats(self, mode, masks):
         """
         Calculate activation statistics in the current list of ROIs
         :param mode: do percent activated voxels in  ROI (vox) or the mean z-score in ROI (mean)
@@ -84,7 +87,7 @@ class PostStats:
                  right_stats: list of statistics in the right hemisphere ROIs
                  ars: list of asymmetry ratios for each ROI
         """
-        masks = self.masks
+        masks = masks
         vox = {}  # dictionary of mask: mask voxels
         res = {}  # dictionary of roi: percent activation
         n = {} # dictionary of n activated voxels in ROI
@@ -178,7 +181,7 @@ class PostStats:
 
         return html_table
 
-    def generate_csv(self, left_stats, right_stats, leftns, rightns, ars):
+    def generate_csv(self, left_stats, right_stats, leftns, rightns, ars, rois):
         # table for csv output
         tSNR = self.calc_iqms()[0]
         FD = self.calc_iqms()[1]
@@ -190,22 +193,29 @@ class PostStats:
         left_n = []
         right_n = []
         li_labels = []
-        for region in self.rois:
+        sum_labels = []
+        for region in rois:
             left_per.append(region + ' left %')
             right_per.append(region + ' right %')
             left_n.append(region + ' left voxels')
             right_n.append(region + ' right voxels')
             li_labels.append(region + ' LI')
-        column_labels = ['subject'] + ['task'] + left_per + right_per + li_labels + left_n + right_n + ['FramewiseDisplacement'] + ['tSNR']
-
-        row = [self.subject_id] + [self.task] + left_stats + right_stats + ars + leftns + rightns + [FD] + [tSNR]
+            sum_labels.append(region + ' sum')
+        column_labels = ['subject'] + ['task'] + left_per + right_per + li_labels + left_n + right_n + sum_labels + ['FramewiseDisplacement'] + ['tSNR']
+        sums = [sum(x) for x in zip(leftns, rightns)]
+        row = [self.subject_id] + [self.task] + left_stats + right_stats + ars + leftns + rightns + sums + [FD] + [tSNR]
         data = np.array([row])
         df = pd.DataFrame(data, columns=column_labels)
         df.set_index('subject', inplace=True)
-        df.to_csv(os.path.join(self.outputdir, self.task, self.task + "_stats.csv"))
+        df.to_csv(os.path.join(self.outputdir, self.task, self.task + "_data.csv"))
+
+    def generate_csv_wrap(self, task):
+        if task == 'scenemem':
+            self.generate_csv(self.vox_left_stats, self.vox_right_stats, self.leftns, self.rightns, self.vox_ars, self.rois)
+        else:
+            self.generate_csv(self.all_vox_left_stats, self.all_vox_right_stats, self.all_leftns, self.all_rightns, self.all_vox_ars, self.all_rois)
 
     def generate_vox_statistics_table(self):
-        self.generate_csv(self.vox_left_stats, self.vox_right_stats, self.leftns, self.rightns, self.vox_ars)
         return self.generate_statistics_table(self.vox_left_stats, self.vox_right_stats, self.vox_ars, 'vox')
 
     def generate_mean_statistics_table(self):
