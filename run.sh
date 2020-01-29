@@ -81,6 +81,7 @@ config_aroma="$(parse_config 'AROMA')"
 config_lite="$(parse_config 'light_output')"
 config_fwhm="$(parse_config 'fwhm')"
 config_cthresh="$(parse_config 'cluster_size_thresh')"
+config_alpha="$(parse_config 'alpha')"
 if [[ $config_aroma == 'false' ]]; then aroma_FLAG=''; else aroma_FLAG='--aroma'; fi
 
 # Run script
@@ -90,6 +91,7 @@ if [[ $config_aroma == 'false' ]]; then aroma_FLAG=''; else aroma_FLAG='--aroma'
                                            --tasks "${TASK_LIST}"  \
                                            --fwhm "$config_fwhm" \
                                            --cthresh "$config_cthresh" \
+                                           --alpha "$config_alpha" \
                                             ${aroma_FLAG} \
                                             || error_exit "$CONTAINER Main script failed! Check traceback above."
 

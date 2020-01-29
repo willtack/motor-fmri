@@ -5,11 +5,11 @@
 	"author": "Brain Science Center, University of Pennsylvania",
 	"maintainer": "Will Tackett <william.tackett@pennmedicine.upenn.edu>",
 	"source": "https://github.com/willtack/lingua-map",
-	"version": "1.3.0_0.3.0",
+	"version": "1.4.0_0.4.0",
 	"custom": {
 		"gear-builder": {
 			"category": "analysis",
-			"image": "willtack/lingua-map:0.3.0"
+			"image": "willtack/lingua-map:0.4.0"
 		},
 		"flywheel": {
 			"suite": "BrainScienceCenter"
@@ -31,21 +31,29 @@
 			"description": "Use ICA-AROMA denoised BOLD images.",
 			"type": "boolean"
 		},
-      "save_intermediary_files":{
+      "light_output":{
             "default": false,
-            "description": "Save the files from the model fitting workflow.",
+            "description": "Don't save the large report_results folder. Only the PDF and the stats CSV will be outputted.",
             "type": "boolean"
         },
 		"fwhm":{
             "default": "6",
             "description": "Size of smoothing kernel",
-            "type": "integer"
+            "type": "integer",
+			"optional": true
         },
 		"cluster_size_thresh":{
             "default": "150",
             "description": "Cluster extent threshold",
-            "type": "integer"
-        }
+            "type": "integer",
+			"optional": true
+        },
+		"alpha":{
+			"default": "0.05",
+			"description": "Alpha value for thresholding",
+			"type": "number",
+			"optional": true
+		}
 	},
 	"environment": {
 		"FLYWHEEL": "/flywheel/v0",
