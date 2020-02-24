@@ -39,10 +39,10 @@ class PostStats:
 
     def create_glass_brain(self):
         nilearn.plotting.plot_glass_brain(nilearn.image.smooth_img(self.img, 4),
-                                          output_file=os.path.join(self.outputdir, self.task, self.task + "_gb.svg"),
+                                          output_file=os.path.join(self.outputdir, self.task, 'figs', self.task + "_gb.svg"),
                                           display_mode='lyrz', colorbar=True, plot_abs=False, threshold=0)
 
-        out_svg = self.task + "/" + self.task + "_gb.svg"
+        out_svg = self.task + "/figs/" + self.task + "_gb.svg"
         return out_svg
 
     def get_mask_vox(self, msk):
@@ -154,10 +154,10 @@ class PostStats:
         plt.title(self.task)
         plt.xticks(index + bar_width / 2, self.rois)
         plt.legend()
-        plt.savefig(os.path.join(self.outputdir, self.task, self.task + "_" + mode + "_bar.svg"))
+        plt.savefig(os.path.join(self.outputdir, self.task, 'figs', self.task + "_" + mode + "_bar.svg"))
         plt.close()
 
-        plot_file = "./" + self.task + "/" + self.task + "_" + mode + "_bar.svg"
+        plot_file = "./" + self.task + "/figs/" + self.task + "_" + mode + "_bar.svg"
         return plot_file
 
     def create_vox_bar_plot(self):
@@ -176,7 +176,7 @@ class PostStats:
             columns = ['left', 'right', 'LI']
         data = np.array([left_stats, right_stats, ars]).transpose()
         df = pd.DataFrame(data, index=row, columns=columns)
-        df.to_csv(os.path.join(self.outputdir, self.task, self.task + "_" + mode + "_html_table.csv"))
+        df.to_csv(os.path.join(self.outputdir, self.task, 'figs', self.task + "_" + mode + "_html_table.csv"))
         html_table = df.to_html()
 
         return html_table
@@ -207,7 +207,7 @@ class PostStats:
         data = np.array([row])
         df = pd.DataFrame(data, columns=column_labels)
         df.set_index('subject', inplace=True)
-        df.to_csv(os.path.join(self.outputdir, self.task, self.task + "_data.csv"))
+        df.to_csv(os.path.join(self.outputdir, self.task, 'stats', self.task + "_data.csv"))
 
     def generate_csv_wrap(self, task):
         if task == 'scenemem':
@@ -246,6 +246,6 @@ class PostStats:
         mean_img_path = mi_run.outputs.out_file
         html_view = nilearn.plotting.view_img(self.img, threshold=0, bg_img=mean_img_path, vmax=10,
                                               title=self.task)
-        html_view.save_as_html(os.path.join(self.outputdir, self.task, self.task + "_viewer.html"))
-        viewer_file = "./" + self.task + "/" + self.task + "_viewer.html"
+        html_view.save_as_html(os.path.join(self.outputdir, self.task, 'figs', self.task + "_viewer.html"))
+        viewer_file = "./" + self.task + "/figs/" + self.task + "_viewer.html"
         return viewer_file
