@@ -4,21 +4,21 @@
 #
 
 FLYWHEEL_BASE=/flywheel/v0
+CONTAINER='[flywheel/presurgicalreport]'
 CODE_BASE=${FLYWHEEL_BASE}/src
 MANIFEST_FILE=${FLYWHEEL_BASE}/manifest.json
 INPUT_DIR=${FLYWHEEL_BASE}/input
-mkdir -p ${INPUT_DIR}
 OUTPUT_DIR=${FLYWHEEL_BASE}/output
+mkdir -p ${INPUT_DIR}
 mkdir -p ${OUTPUT_DIR}
-CONTAINER='[flywheel/presurgicalreport]'
 
 function error_exit()
 {
 	echo "$@" 1>&2
 	exit 1
 }
-# Parse configuration
 function parse_config {
+  # Parse the config file
   CONFIG_FILE=$FLYWHEEL_BASE/config.json
   MANIFEST_FILE=$FLYWHEEL_BASE/manifest.json
 
@@ -31,9 +31,10 @@ function parse_config {
 }
 function cleanup {
   # Remove report_results directory and other from container
-  rm $(find ${RESULTS_DIR} -maxdepth 3 -type f | grep _resample_1.nii.gz) || echo "Resampled image not found. No need to remove."
-  rm $(find ${RESULTS_DIR} -maxdepth 3 -type f | grep _bet_mask.nii.gz) || echo "Mask image not found. No need to remove."
-  rm $(find ${RESULTS_DIR} -maxdepth 3 -type f | grep _tsnr.nii.gz) || echo "mean_tsnr.nii.gz not found. No need to remove."
+	rm $(find "${RESULTS_DIR}" -maxdepth 3 -type f | grep stat_result.json) || echo " stat_result.json not found. No need to remove."
+	rm $(find "${RESULTS_DIR}" -maxdepth 3 -type f | grep stdev.nii.gz) || echo " stdev.nii.gz not found. No need to remove."
+  rm $(find "${RESULTS_DIR}" -maxdepth 3 -type f | grep _tsnr.nii.gz) || echo "mean_tsnr.nii.gz not found. No need to remove."
+	rm $(find "${RESULTS_DIR}" -maxdepth 3 -type f | grep _input_functional_masked) || echo "Masked images not found. No need to remove."
 }
 
 
@@ -82,6 +83,7 @@ config_lite="$(parse_config 'light_output')"
 config_fwhm="$(parse_config 'fwhm')"
 config_cthresh="$(parse_config 'cluster_size_thresh')"
 config_alpha="$(parse_config 'alpha')"
+config_bet="$(parse_config 'bet')"
 if [[ $config_aroma == 'false' ]]; then aroma_FLAG=''; else aroma_FLAG='--aroma'; fi
 
 # Run script
@@ -102,17 +104,18 @@ cleanup
 # Copy PDF to output directory
 cp "${RESULTS_DIR}"/"${SUB_ID}"_report.pdf ${OUTPUT_DIR}/
 
-# Copy csv files to output directory for easy download
+# Concatenate csv files and copy to output directory for easy download
 out_csv_file="${SUB_ID}_csv.csv"
-for filename in $(find ${RESULTS_DIR} -type f | grep data | grep .csv | egrep -v scenemem); do
+for filename in $(find "${RESULTS_DIR}" -type f | grep data | grep .csv | grep -Ev scenemem); do
   if [ "$filename" != "$out_csv_file" ] ;
    then
-      cat $filename >> $out_csv_file
+      cat "$filename" >> "$out_csv_file"
   fi
 done
-sed -n '1~2!p' $out_csv_file > "${SUB_ID}_language_data.csv"
+
+sed -n '1~2!p' "$out_csv_file" > "${SUB_ID}_language_data.csv" # delete the headers (every other row)
 cp "${SUB_ID}_language_data.csv" ${OUTPUT_DIR}/
-cp ${RESULTS_DIR}/scenemem/scenemem_data.csv ${OUTPUT_DIR}/"${SUB_ID}_scenemem_data.csv"
+cp "${RESULTS_DIR}"/scenemem/scenemem_data.csv ${OUTPUT_DIR}/"${SUB_ID}_scenemem_data.csv"
 
 # Position results directory as zip file in /flywheel/v0/output
 if [[ $config_lite == 'false' ]]; then
@@ -123,4 +126,3 @@ fi
 rm -rf "${RESULTS_DIR}" || echo "No results directory to delete."
 
 echo "Completed analysis and generated report successfully!"
-
