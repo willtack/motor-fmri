@@ -1,3 +1,4 @@
+flywheel
 weasyprint
 nibabel
 nistats
