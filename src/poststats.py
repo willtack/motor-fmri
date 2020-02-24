@@ -10,7 +10,7 @@ import numpy as np
 from nipype.algorithms.confounds import TSNR
 import os
 import nipype.interfaces.fsl as fsl
-import nilearn
+import nilearn.plotting
 import pandas as pd
 
 
@@ -242,9 +242,8 @@ class PostStats:
 
     def create_html_viewer(self):
         mi = fsl.MeanImage()
-        mean_img_path = os.path.join(self.taskdir, self.task + "_input_functional_bet_mean.nii.gz")
-        mi.run(in_file=os.path.join(self.taskdir, self.task + "_input_functional_bet.nii.gz"),
-               out_file=mean_img_path)
+        mi_run = mi.run(in_file=os.path.join(self.taskdir, self.task + "_input_functional_masked.nii.gz"))
+        mean_img_path = mi_run.outputs.out_file
         html_view = nilearn.plotting.view_img(self.img, threshold=0, bg_img=mean_img_path, vmax=10,
                                               title=self.task)
         html_view.save_as_html(os.path.join(self.outputdir, self.task, self.task + "_viewer.html"))
