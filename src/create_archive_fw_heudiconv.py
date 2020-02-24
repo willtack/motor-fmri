@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+#
+# Authors: Tinashe Tapera, Matt Cieslak
+#
+
 import json
 import flywheel
 import logging
