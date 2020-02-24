@@ -8,6 +8,9 @@ RUN mkdir -p ${FLYWHEEL}
 # Set the entrypoint
 ENTRYPOINT ["/flywheel/v0/run.sh"]
 
+# Pre-cache neurodebian key
+COPY docker/files/neurodebian.gpg /usr/local/etc/neurodebian.gpg
+
 # Prepare environment
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -22,62 +25,63 @@ RUN apt-get update && \
                     pkg-config \
                     jq \
                     zip \
+                    nano \
                     git && \
     curl -sL https://deb.nodesource.com/setup_10.x | bash - && \
     apt-get install -y --no-install-recommends \
                     nodejs && \
     apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-ENV FSLDIR="/usr/share/fsl"
-RUN apt-get update -qq \
-  && apt-get install -y -q --no-install-recommends \
-         bc \
-         dc \
-         file \
-         libfontconfig1 \
-         libfreetype6 \
-         libgl1-mesa-dev \
-         libglu1-mesa-dev \
-         libgomp1 \
-         libice6 \
-         libxcursor1 \
-         libxft2 \
-         libxinerama1 \
-         libxrandr2 \
-         libxrender1 \
-         libxt6 \
-         wget \
-  && apt-get clean \
-  && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
-  && echo "Downloading FSL ..." \
-  && mkdir -p /usr/share/fsl \
-  && curl -fsSL --retry 5 https://fsl.fmrib.ox.ac.uk/fsldownloads/fsl-5.0.11-centos6_64.tar.gz \
-  | tar -xz -C /usr/share/fsl --strip-components 1 \
-  && echo "Installing FSL conda environment ..." \
-  && bash /usr/share/fsl/etc/fslconf/fslpython_install.sh -f /usr/share/fsl
+# Installing Neurodebian packages (FSL, AFNI, git)
+RUN curl -sSL "http://neuro.debian.net/lists/$( lsb_release -c | cut -f2 ).us-ca.full" >> /etc/apt/sources.list.d/neurodebian.sources.list && \
+    apt-key add /usr/local/etc/neurodebian.gpg && \
+    (apt-key adv --refresh-keys --keyserver hkp://ha.pool.sks-keyservers.net 0xA5D32F012649A5A9 || true)
 
-ENV PATH="${FSLDIR}/bin:$PATH"
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+                    fsl-core=5.0.9-5~nd16.04+1 \
+                    fsl-mni152-templates=5.0.7-2 \
+                    afni=16.2.07~dfsg.1-5~nd16.04+1 \
+                    git-annex-standalone && \
+    apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+ENV FSLDIR="/usr/share/fsl/5.0" \
+    FSLOUTPUTTYPE="NIFTI_GZ" \
+    FSLMULTIFILEQUIT="TRUE" \
+    POSSUMDIR="/usr/share/fsl/5.0" \
+    LD_LIBRARY_PATH="/usr/lib/fsl/5.0:$LD_LIBRARY_PATH" \
+    FSLTCLSH="/usr/bin/tclsh" \
+    FSLWISH="/usr/bin/wish" \
+    AFNI_MODELPATH="/usr/lib/afni/models" \
+    AFNI_IMSAVE_WARNINGS="NO" \
+    AFNI_TTATLAS_DATASET="/usr/share/afni/atlases" \
+    AFNI_PLUGINPATH="/usr/lib/afni/plugins"
+ENV PATH="/usr/lib/fsl/5.0:/usr/lib/afni/bin:$PATH"
 
 # Installing and setting up miniconda
-RUN curl -sSLO https://repo.continuum.io/miniconda/Miniconda3-4.5.12-Linux-x86_64.sh && \
-    bash Miniconda3-4.5.12-Linux-x86_64.sh -b -p /usr/local/miniconda && \
-    rm Miniconda3-4.5.12-Linux-x86_64.sh
+RUN curl -sSLO https://repo.continuum.io/miniconda/Miniconda3-4.5.11-Linux-x86_64.sh && \
+    bash Miniconda3-4.5.11-Linux-x86_64.sh -b -p /usr/local/miniconda && \
+    rm Miniconda3-4.5.11-Linux-x86_64.sh
 
 ENV PATH=/usr/local/miniconda/bin:$PATH \
     LANG=C.UTF-8 \
     LC_ALL=C.UTF-8 \
     PYTHONNOUSERSITE=1
 
-RUN conda install -y mkl=2019.4 mkl-service;  sync &&\
-    conda install -y numpy=1.15.4 \
-                     scipy=1.3.0 \
-                     scikit-learn=0.19.1 \
-                     matplotlib=2.2.2 \
-                     pandas=0.25.0 \
+# Installing precomputed python packages
+RUN conda install -y python=3.7.1 \
+                     numpy=1.15.4 \
+                     scipy=1.2.0 \
+                     mkl=2019.1 \
+                     mkl-service \
+                     scikit-learn=0.20.2 \
+                     matplotlib=2.2.3 \
+                     seaborn=0.9.0 \
+                     pandas=0.24.0 \
                      libxml2=2.9.9 \
                      graphviz=2.40.1 \
-                     zlib; sync && \
-    conda install -c conda-forge traits; sync && \
+                     traits=4.6.0 \
+                     zlib; sync &&  \
     chmod -R a+rX /usr/local/miniconda; sync && \
     chmod +x /usr/local/miniconda/bin/*; sync && \
     conda build purge-all; sync && \
