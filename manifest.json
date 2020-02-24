@@ -2,57 +2,44 @@
 	"name": "presurg",
 	"label": "linguaMap: generate a report analyzing language task fMRI data",
 	"description": "linguaMap is a gear for analyzing language tasks, particularly in the context of presurgical lateralization. It takes the results of fMRIPrep as input and compiles activation maps and ROI statistics into an html report. It was originally designed for epilepsy patients who receive an fMRI to lateralize language function prior to surgery.",
-	"author": "Brain Science Center, University of Pennsylvania",
-	"maintainer": "Will Tackett <william.tackett@pennmedicine.upenn.edu>",
-	"source": "https://github.com/willtack/lingua-map",
-	"version": "1.4.0_0.4.0",
-	"custom": {
-		"gear-builder": {
-			"category": "analysis",
-			"image": "willtack/lingua-map:0.4.0"
-		},
-		"flywheel": {
-			"suite": "BrainScienceCenter"
-		}
-	},
-	"license": "BSD-3-Clause",
+	"version": "1.5.0_0.5.0b",
 	"inputs": {
 		"api_key": {
 			"base": "api-key"
 		},
 		"fmriprepdir": {
-			"description": "Full path to directory containing fmriprep results",
-			"base": "file"
+			"base": "file",
+			"description": "Full path to directory containing fmriprep results"
 		}
 	},
 	"config": {
-		"AROMA":{
+		"AROMA": {
 			"default": false,
 			"description": "Use ICA-AROMA denoised BOLD images.",
 			"type": "boolean"
 		},
-      "light_output":{
-            "default": false,
-            "description": "Don't save the large report_results folder. Only the PDF and the stats CSV will be outputted.",
-            "type": "boolean"
-        },
-		"fwhm":{
-            "default": "6",
-            "description": "Size of smoothing kernel",
-            "type": "integer",
-			"optional": true
-        },
-		"cluster_size_thresh":{
-            "default": "150",
-            "description": "Cluster extent threshold",
-            "type": "integer",
-			"optional": true
-        },
-		"alpha":{
+		"alpha": {
 			"default": "0.05",
 			"description": "Alpha value for thresholding",
-			"type": "number",
-			"optional": true
+			"optional": true,
+			"type": "number"
+		},
+		"cluster_size_thresh": {
+			"default": "150",
+			"description": "Cluster extent threshold",
+			"optional": true,
+			"type": "integer"
+		},
+		"fwhm": {
+			"default": "6",
+			"description": "Size of smoothing kernel",
+			"optional": true,
+			"type": "integer"
+		},
+		"light_output": {
+			"default": false,
+			"description": "Don't save the large report_results folder. Only the PDF and the stats CSV will be outputted.",
+			"type": "boolean"
 		}
 	},
 	"environment": {
@@ -61,10 +48,27 @@
 		"FSLMULTIFILEQUIT": "TRUE",
 		"FSLOUTPUTTYPE": "NIFTI_GZ",
 		"LANG": "C.UTF-8",
+		"LC_ALL": "C.UTF-8",
 		"LD_LIBRARY_PATH": "/usr/share/fsl/6.0/lib",
 		"PATH": "/usr/local/miniconda/bin:/usr/share/fsl/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+		"PYTHONNOUSERSITE": "1",
 		"PYTHON_PIP_VERSION": "19.2.2",
 		"PYTHON_VERSION": "3.7.4"
 	},
-	"command": "/flywheel/v0/run.sh"
+	"command": "/flywheel/v0/run.sh",
+	"author": "William Tackett",
+	"maintainer": "William Tackett",
+	"license": "BSD-3-Clause",
+	"source": "https://github.com/willtack/lingua-map",
+	"url": "",
+	"custom": {
+		"gear-builder": {
+			"category": "analysis",
+			"image": "willtack/lingua-map:0.5.0b"
+		},
+		"flywheel": {
+			"suite": "BrainScienceCenter"
+		}
+
+	}
 }
