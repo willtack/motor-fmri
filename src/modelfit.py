@@ -10,7 +10,8 @@ from nistats import thresholding
 datadir = os.getcwd()
 template = os.path.join(datadir, "masks", "mni152.nii.gz")
 
-def model_fitting(source_img, prepped_img, subject_info, aroma, task, args, template, mask_file, run_number):
+
+def model_fitting(source_img, prepped_img, subject_info, aroma, task, args, mask_file, run_number):
     # Get the necessary parameters
     outputdir = args.outputdir
     fwhm = args.fwhm
@@ -25,6 +26,8 @@ def model_fitting(source_img, prepped_img, subject_info, aroma, task, args, temp
 
     if not os.path.exists(taskdir):
         os.mkdir(taskdir)
+    os.mkdir(os.path.join(taskdir, 'stats'))
+    os.mkdir(os.path.join(taskdir, 'figs'))
 
     processed_image = preprocess(aroma, fwhm, prepped_img, mask_file, taskdir, task)
 
@@ -116,7 +119,7 @@ def model_fitting(source_img, prepped_img, subject_info, aroma, task, args, temp
 
     # Do a cluster analysis using the FDR corrected threshold on the original z_img
     cl = fsl.Cluster(in_file=z_img, threshold=fdr_threshold)
-    cluster_file = os.path.join(taskdir, task + "_cluster_stats.txt")
+    cluster_file = os.path.join(taskdir, 'stats', task + "_cluster_stats.txt")
     cluster_analysis(cluster_file, cl)
 
     # Resample the result image with AFNI
