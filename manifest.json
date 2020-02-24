@@ -19,21 +19,18 @@
 			"type": "boolean"
 		},
 		"alpha": {
-			"default": "0.05",
+			"default": 0.05,
 			"description": "Alpha value for thresholding",
-			"optional": true,
 			"type": "number"
 		},
 		"cluster_size_thresh": {
 			"default": "150",
 			"description": "Cluster extent threshold",
-			"optional": true,
 			"type": "integer"
 		},
 		"fwhm": {
 			"default": "6",
 			"description": "Size of smoothing kernel",
-			"optional": true,
 			"type": "integer"
 		},
 		"light_output": {
