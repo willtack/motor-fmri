@@ -277,7 +277,7 @@ def generate_report():
                 post_stats = poststats.PostStats(sid, source_img, thresholded_img, task, rois, masks, all_rois, all_masks,
                                                  confounds, outputdir, datadir)
                 sec_list.append(task_section_template.render(
-                    section_name="ses-01_task-" + task + "_run-" + run_number,  # the link that IDs this section for the nav bar
+                    section_name="task-" + task + "_run-" + run_number,  # the link that IDs this section for the nav bar
                     task_title=task,
                     is_png=is_png,
                     run_number=str(i + 1),
@@ -297,7 +297,7 @@ def generate_report():
             append_task_section(pdf_sections, True)
 
     # Produce and write the report to file
-    with open(os.path.join(outputdir, "report.html"), "w") as f:
+    with open(os.path.join(outputdir, "sub-" + sid + "_report.html"), "w") as f:
         f.write(base_template.render(
             title=title,
             sections=sections
