@@ -95,6 +95,17 @@ cleanup
 # Copy PDF to output directory
 cp "${RESULTS_DIR}"/"${SUB_ID}"_report.pdf ${OUTPUT_DIR}/
 
+# Copy html report to its own directory
+HTML_DIR=${OUTPUT_DIR}/"${SUB_ID}"_report_html
+mkdir "${HTML_DIR}"
+cp "${RESULTS_DIR}"/"${SUB_ID}"_report.html "${HTML_DIR}"
+for task in ${TASK_LIST}; do
+  mkdir "${HTML_DIR}"/"${task}"
+  cp -r $(find "${RESULTS_DIR}"/"${task}" -type d  | grep -E figs) "${HTML_DIR}"/"${task}"
+done
+zip -r ${OUTPUT_DIR}/"${SUB_ID}"_report_html.zip "${HTML_DIR}"
+rm -rf "${HTML_DIR}"
+
 # Concatenate csv files and copy to output directory for easy download
 out_csv_file="${SUB_ID}_csv.csv"
 for filename in $(find "${RESULTS_DIR}" -type f | grep data | grep .csv | grep -Ev scenemem); do
