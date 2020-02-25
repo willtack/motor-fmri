@@ -38,33 +38,25 @@ function cleanup {
 }
 
 
-# CREATE A BIDS FORMATTED DIRECTORY
-#   Use fw-heudiconv to accomplish this task
-/usr/local/miniconda/bin/python3 ${CODE_BASE}/create_archive_fw_heudiconv.py
- if [[ $? != 0 ]]; then
-   error_exit "$CONTAINER Problem creating archive! Exiting (1)"
- fi
-
-# VALIDATE INPUT DATA
-# Check if the input directory is not empty
-if [[ "$(ls -A $INPUT_DIR)" ]] ; then
-    echo "$CONTAINER  Starting..."
-else
-    error_exit "$CONTAINER Input directory is empty: $INPUT_DIR"
+# Download a BIDs directory using fw-heudiconv
+BIDS_DIR=${INPUT_DIR}/bids_dataset
+if [[ ! -d ${BIDS_DIR} ]]; then
+  /usr/local/miniconda/bin/python3 ${CODE_BASE}/create_archive_fw_heudiconv.py ||  error_exit "$CONTAINER Problem creating archive! Exiting (1)"
 fi
 
-# Show the contents of the BIDS directory
-BIDS_DIR=${INPUT_DIR}/bids_dataset
 ls -R ${BIDS_DIR}
+echo "$CONTAINER  Starting..."
 
 # Get the list of tasks based on what's in the bids dataset
 TASK_LIST=$(python ${CODE_BASE}/filter_tasks.py --bidsdir ${BIDS_DIR})
 
 # Position fmriprepdir contents
-unzip ${INPUT_DIR}/fmriprepdir/*.zip -d ${INPUT_DIR}
-cd ${INPUT_DIR} || error_exit "$CONTAINER Could not enter input directory."
-FMRIPREP_DIR=$(find $(pwd) -maxdepth 2 -type d | grep -E -v bids | grep -E -v fmriprepdir | grep -E fmriprep)
-cd ${FLYWHEEL_BASE} || error_exit "$CONTAINER Could not enter /flywheel/v0/"
+# See if it's already been extracted (for testing purposes). If not, unzip and look in the appropriate location
+FMRIPREP_DIR=$(find $(pwd) -maxdepth 3 -type d | grep -E -v bids | grep -E -v fmriprepdir | grep -E fmriprep)
+if [[ ! -d ${FMRIPREP_DIR} ]]; then
+  unzip ${INPUT_DIR}/fmriprepdir/*.zip -d ${INPUT_DIR}
+  FMRIPREP_DIR=$(find $(pwd) -maxdepth 2 -type d | grep -E -v bids | grep -E -v fmriprepdir | grep -E fmriprep)
+fi
 
 # Copy event files to bids dataset
 cp ${FLYWHEEL_BASE}/events/* ${INPUT_DIR}/bids_dataset/
@@ -83,7 +75,6 @@ config_lite="$(parse_config 'light_output')"
 config_fwhm="$(parse_config 'fwhm')"
 config_cthresh="$(parse_config 'cluster_size_thresh')"
 config_alpha="$(parse_config 'alpha')"
-config_bet="$(parse_config 'bet')"
 if [[ $config_aroma == 'false' ]]; then aroma_FLAG=''; else aroma_FLAG='--aroma'; fi
 
 # Run script
