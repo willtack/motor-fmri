@@ -148,7 +148,6 @@ class PostStats:
     def generate_statistics_table(self):
         row = self.rois
         # table for HTML report
-        columns = ['left', 'right', 'LI']
         columns = ['left %', 'right %', 'LI']
         data = np.array([self.left_stats, self.right_stats, self.ars]).transpose()
         df = pd.DataFrame(data, index=row, columns=columns)
