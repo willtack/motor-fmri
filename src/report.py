@@ -224,7 +224,7 @@ def generate_report():
     # Do the analysis for each task. Each task has a unique set of ROIs
     for task in task_list:
         # get all the runs from the BIDS dataset, loop through if more than one
-        run_list = layout.get(task=task, session="01", suffix="bold", extension="nii.gz")
+        run_list = layout.get(task=task, suffix="bold", extension="nii.gz")
         for i in range(0, len(run_list)):
             source_img = run_list[i]
             run_number = "0" + str(i + 1)
