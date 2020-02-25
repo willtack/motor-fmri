@@ -15,11 +15,9 @@ import poststats
 import argparse
 import modelfit
 import os
-import nipype.interfaces.fsl as fsl
 from bids import BIDSLayout
 from nipype.interfaces.base import Bunch
 from jinja2 import FileSystemLoader, Environment
-from weasyprint import HTML, CSS
 
 
 def setup(taskname, source_img, run_number):
@@ -218,9 +216,6 @@ def generate_report():
         task_list=task_list
     ))
 
-    # Branch off the section
-    pdf_sections = list(sections)
-
     # Do the analysis for each task. Each task has a unique set of ROIs
     for task in task_list:
         # get all the runs from the BIDS dataset, loop through if more than one
@@ -235,64 +230,52 @@ def generate_report():
 
             thresholded_img = modelfit.model_fitting(source_epi, input_functional, info, aroma, task, args, mask_file, i)
 
-            def append_task_section(sec_list, is_png):
-                all_rois = ["whole brain", "broca's area", "inferior frontal gyrus", "middle frontal gyrus",
-                            "superior frontal gyrus", "frontal lobe", "inferior temporal gyrus", "middle temporal gyrus",
-                            "superior temporal gyrus", "planum temporale", "angular gyrus"]
-                all_masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lifg_mask, rifg_mask, lmfg_mask, rmfg_mask, lsfg_mask,
-                             rsfg_mask, lfront_mask, rfront_mask, litg_mask, ritg_mask, lmtg_mask, rmtg_mask, lstg_mask, rstg_mask,
-                             lpt_mask, rpt_mask, lag_mask, rag_mask]
-                rois = []
-                masks = []
-                if task == 'object':
-                    rois = ['whole brain', "broca's area", "inf. frontal", "mid. frontal", "planum temporale", "angular gyrus"]
-                    masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lifg_mask, rifg_mask, lmfg_mask, rmfg_mask, lpt_mask,
-                             rpt_mask, lag_mask, rag_mask]
-                elif task == 'rhyme':
-                    rois = ['whole brain', "broca's area", "frontal lobe", "planum temporale", "angular gyrus"]
-                    masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lfront_mask, rfront_mask, lpt_mask, rpt_mask, lag_mask,
-                             rag_mask]
-                elif task == 'scenemem':
-                    if is_png:
-                        rois = ['mTL', 'hippocampus', 'amygdala', 'phg', 'entorhinal']
-                    else:
-                        rois = ['mTL', 'hippocampus', 'amygdala', 'parahippocampal gyrus', 'entorhinal cortex']
-                    masks = [lmtl_mask, rmtl_mask, lhc_mask, rhc_mask, lam_mask, ram_mask, lphg_mask, rphg_mask, lent_mask,
-                             rent_mask]
-                elif task == 'sentence':
-                    rois = ['wb', "ba", "sup. TG", "mid. TG", "inf. TG", "pt", "ag"]
-                    masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lstg_mask, rstg_mask, lmtg_mask, rmtg_mask, litg_mask,
-                             ritg_mask, lpt_mask, rpt_mask, lag_mask, rag_mask]
-                elif task == 'wordgen':
-                    if is_png:
-                        rois = ['whole brain', "broca's area", "sfg", "ifg", "front", "pt", "ag"]
-                    else:
-                        rois = ['whole brain', "broca's area", "superior frontal gyrus", "inferior frontal gyrus", "frontal lobe",
-                                "planum temporale", "angular gyrus"]
-                    masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lsfg_mask, rsfg_mask, lifg_mask, rifg_mask, lfront_mask,
-                             rfront_mask,
-                             lpt_mask, rpt_mask, lag_mask, rag_mask]
+            all_rois = ["whole brain", "broca's area", "inferior frontal gyrus", "middle frontal gyrus",
+                        "superior frontal gyrus", "frontal lobe", "inferior temporal gyrus", "middle temporal gyrus",
+                        "superior temporal gyrus", "planum temporale", "angular gyrus"]
+            all_masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lifg_mask, rifg_mask, lmfg_mask, rmfg_mask, lsfg_mask,
+                         rsfg_mask, lfront_mask, rfront_mask, litg_mask, ritg_mask, lmtg_mask, rmtg_mask, lstg_mask, rstg_mask,
+                         lpt_mask, rpt_mask, lag_mask, rag_mask]
+            rois = []
+            masks = []
+            if task == 'object':
+                rois = ['whole brain', "broca's area", "inf. frontal", "mid. frontal", "planum temporale", "angular gyrus"]
+                masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lifg_mask, rifg_mask, lmfg_mask, rmfg_mask, lpt_mask,
+                         rpt_mask, lag_mask, rag_mask]
+            elif task == 'rhyme':
+                rois = ['whole brain', "broca's area", "frontal lobe", "planum temporale", "angular gyrus"]
+                masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lfront_mask, rfront_mask, lpt_mask, rpt_mask, lag_mask,
+                         rag_mask]
+            elif task == 'scenemem':
+                rois = ['mTL', 'hippocampus', 'amygdala', 'parahippocampal gyrus', 'entorhinal cortex']
+                masks = [lmtl_mask, rmtl_mask, lhc_mask, rhc_mask, lam_mask, ram_mask, lphg_mask, rphg_mask, lent_mask,
+                         rent_mask]
+            elif task == 'sentence':
+                rois = ['wb', "ba", "sup. TG", "mid. TG", "inf. TG", "pt", "ag"]
+                masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lstg_mask, rstg_mask, lmtg_mask, rmtg_mask, litg_mask,
+                         ritg_mask, lpt_mask, rpt_mask, lag_mask, rag_mask]
+            elif task == 'wordgen':
+                rois = ['whole brain', "broca's area", "superior frontal gyrus", "inferior frontal gyrus", "frontal lobe",
+                        "planum temporale", "angular gyrus"]
+                masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lsfg_mask, rsfg_mask, lifg_mask, rifg_mask, lfront_mask,
+                         rfront_mask, lpt_mask, rpt_mask, lag_mask, rag_mask]
 
-                # create a PostStats object for the current task. Add elements to the section based on the object's methods
-                post_stats = poststats.PostStats(sid, source_img, thresholded_img, task, rois, masks, all_rois, all_masks,
-                                                 confounds, outputdir, datadir)
-                sec_list.append(task_section_template.render(
-                    section_name="task-" + task + "_run-" + run_number,  # the link that IDs this section for the nav bar
-                    task_title=task,
-                    is_png=is_png,
-                    run_number=str(i + 1),
-                    len_run_list=len(run_list),
-                    mean_tsnr=post_stats.calc_iqms()[0],
-                    mean_fd=post_stats.calc_iqms()[1],
-                    gb_path=post_stats.create_glass_brain(),  # glass brain
-                    viewer_path=post_stats.create_html_viewer(),  # interactive statistical map viewer
-                    bar_path=post_stats.create_bar_plot(),  # bar plots
-                    table=post_stats.generate_statistics_table(),  # statistics tables
-                ))
-                post_stats.generate_csv_wrap(task)
-
-            append_task_section(sections, False)
-            append_task_section(pdf_sections, True)
+            # create a PostStats object for the current task. Add elements to the section based on the object's methods
+            post_stats = poststats.PostStats(sid, source_img, thresholded_img, task, rois, masks, all_rois, all_masks,
+                                             confounds, outputdir, datadir)
+            sections.append(task_section_template.render(
+                section_name="task-" + task + "_run-" + run_number,  # the link that IDs this section for the nav bar
+                task_title=task,
+                run_number=str(i + 1),
+                len_run_list=len(run_list),
+                mean_tsnr=post_stats.calc_iqms()[0],
+                mean_fd=post_stats.calc_iqms()[1],
+                gb_path=post_stats.create_glass_brain(),  # glass brain
+                viewer_path=post_stats.create_html_viewer(),  # interactive statistical map viewer
+                bar_path=post_stats.create_bar_plot(),  # bar plots
+                table=post_stats.generate_statistics_table(),  # statistics tables
+            ))
+            post_stats.generate_csv_wrap(task)
 
     # Produce and write the report to file
     with open(os.path.join(outputdir, "sub-" + sid + "_report.html"), "w") as f:
@@ -300,16 +283,6 @@ def generate_report():
             title=title,
             sections=sections
         ))
-    with open(os.path.join(outputdir, "report_png.html"), "w") as f:
-        f.write(base_template.render(
-            title=title,
-            sections=pdf_sections
-        ))
-    html = HTML(os.path.join(outputdir, "report_png.html"))
-    css = CSS(string='@page { size: A0 landscape; margin: .25cm }')
-    html.write_pdf(
-        os.path.join(outputdir, "sub-" + sid + "_report.pdf"), stylesheets=[css])
-    os.remove(os.path.join(outputdir, "report_png.html"))
 
 
 if __name__ == "__main__":
