@@ -286,10 +286,8 @@ def generate_report():
                     mean_fd=post_stats.calc_iqms()[1],
                     gb_path=post_stats.create_glass_brain(),  # glass brain
                     viewer_path=post_stats.create_html_viewer(),  # interactive statistical map viewer
-                    vox_bar_path=post_stats.create_vox_bar_plot(),  # bar plots
-                    mean_bar_path=post_stats.create_mean_bar_plot(),
-                    vox_table=post_stats.generate_vox_statistics_table(),  # statistics tables
-                    mean_table=post_stats.generate_mean_statistics_table()
+                    bar_path=post_stats.create_bar_plot(),  # bar plots
+                    table=post_stats.generate_statistics_table(),  # statistics tables
                 ))
                 post_stats.generate_csv_wrap(task)
 

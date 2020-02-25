@@ -25,24 +25,12 @@
     <div style="border: 1px solid black;">
         <h4 style="margin-left: 20px; margin-top: 10px"> Percentage of activated voxels in ROI </h4>
         <div class="table">
-              {{vox_table}}
+              {{table}}
         </div>
         <div class="barplot">
-            <object data={{vox_bar_path}}></object>
+            <object data={{bar_path}}></object>
         </div>
     </div>
-
-    {% if is_png == false %}
-    <div style="border: 1px solid black;">
-        <h4 style="margin-left: 20px; margin-top: 10px"> Mean z-score in ROI </h4>
-        <div class="table">
-              {{mean_table}}
-        </div>
-        <div class="barplot">
-            <object data={{mean_bar_path}}></object>
-        </div>
-    </div>
-    {% endif %}
 </div>
 
 {% if task_title != 'scenemem' %}
