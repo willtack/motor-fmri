@@ -31,10 +31,11 @@ function parse_config {
 }
 function cleanup {
   # Remove report_results directory and other from container
-	rm $(find "${RESULTS_DIR}" -maxdepth 3 -type f | grep stat_result.json) || echo " stat_result.json not found. No need to remove."
-	rm $(find "${RESULTS_DIR}" -maxdepth 3 -type f | grep stdev.nii.gz) || echo " stdev.nii.gz not found. No need to remove."
-  rm $(find "${RESULTS_DIR}" -maxdepth 3 -type f | grep _tsnr.nii.gz) || echo "mean_tsnr.nii.gz not found. No need to remove."
-	rm $(find "${RESULTS_DIR}" -maxdepth 3 -type f | grep _input_functional_masked) || echo "Masked images not found. No need to remove."
+	rm ${FLYWHEEL_BASE}/stat_result.json || echo " stat_result.json not found. No need to remove."
+	rm ${FLYWHEEL_BASE}/stdev.nii.gz || echo " stdev.nii.gz not found. No need to remove."
+  rm ${FLYWHEEL_BASE}/tsnr.nii.gz || echo "mean_tsnr.nii.gz not found. No need to remove."
+	rm ${FLYWHEEL_BASE}/*_input_functional_masked* || echo "Masked images not found. No need to remove."
+	rm ${FLYWHEEL_BASE}/*.csv || echo "CSVs not found. No need to remove."
 }
 
 
@@ -103,7 +104,9 @@ for task in ${TASK_LIST}; do
   mkdir "${HTML_DIR}"/"${task}"
   cp -r $(find "${RESULTS_DIR}"/"${task}" -type d  | grep -E figs) "${HTML_DIR}"/"${task}"
 done
-zip -r ${OUTPUT_DIR}/"${SUB_ID}"_report_html.zip "${HTML_DIR}"
+cd ${OUTPUT_DIR} && \
+  zip -r ${OUTPUT_DIR}/"${SUB_ID}"_report_html.zip "${SUB_ID}"_report_html && \
+  cd ${FLYWHEEL_BASE} || echo "Unable to zip html directory."
 rm -rf "${HTML_DIR}"
 
 # Concatenate csv files and copy to output directory for easy download
