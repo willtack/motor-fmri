@@ -2,7 +2,7 @@
 	"name": "presurg",
 	"label": "linguaMap: generate a report analyzing language task fMRI data",
 	"description": "linguaMap is a gear for analyzing language tasks, particularly in the context of presurgical lateralization. It takes the results of fMRIPrep as input and compiles activation maps and ROI statistics into an html report. It was originally designed for epilepsy patients who receive an fMRI to lateralize language function prior to surgery.",
-	"version": "1.5.1_0.5.1",
+	"version": "1.5.1_0.5.2",
 	"inputs": {
 		"api_key": {
 			"base": "api-key"
@@ -61,7 +61,7 @@
 	"custom": {
 		"gear-builder": {
 			"category": "analysis",
-			"image": "willtack/lingua-map:0.5.1"
+			"image": "willtack/lingua-map:0.5.2"
 		},
 		"flywheel": {
 			"suite": "BrainScienceCenter"
