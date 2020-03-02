@@ -93,9 +93,6 @@ if [[ $config_aroma == 'false' ]]; then aroma_FLAG=''; else aroma_FLAG='--aroma'
 # Remove unnecessary files
 cleanup
 
-# Copy PDF to output directory
-cp "${RESULTS_DIR}"/"${SUB_ID}"_report.pdf ${OUTPUT_DIR}/
-
 # Copy html report to its own directory
 HTML_DIR=${OUTPUT_DIR}/"${SUB_ID}"_report_html
 mkdir "${HTML_DIR}"
@@ -104,6 +101,7 @@ for task in ${TASK_LIST}; do
   mkdir "${HTML_DIR}"/"${task}"
   cp -r $(find "${RESULTS_DIR}"/"${task}" -type d  | grep -E figs) "${HTML_DIR}"/"${task}"
 done
+cp -r ${FLYWHEEL_BASE}/imgs "${HTML_DIR}"
 cd ${OUTPUT_DIR} && \
   zip -r ${OUTPUT_DIR}/"${SUB_ID}"_report_html.zip "${SUB_ID}"_report_html && \
   cd ${FLYWHEEL_BASE} || echo "Unable to zip html directory."
