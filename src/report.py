@@ -230,38 +230,41 @@ def generate_report():
 
             thresholded_img = modelfit.model_fitting(source_epi, input_functional, info, aroma, task, args, mask_file, i)
 
-            all_rois = ["whole brain", "broca's area", "inferior frontal gyrus", "middle frontal gyrus",
-                        "superior frontal gyrus", "frontal lobe", "inferior temporal gyrus", "middle temporal gyrus",
-                        "superior temporal gyrus", "planum temporale", "angular gyrus"]
-            all_masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lifg_mask, rifg_mask, lmfg_mask, rmfg_mask, lsfg_mask,
-                         rsfg_mask, lfront_mask, rfront_mask, litg_mask, ritg_mask, lmtg_mask, rmtg_mask, lstg_mask, rstg_mask,
-                         lpt_mask, rpt_mask, lag_mask, rag_mask]
-            rois = []
-            masks = []
-            if task == 'object':
-                rois = ['whole brain', "broca's area", "inf. frontal", "mid. frontal", "planum temporale", "angular gyrus"]
-                masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lifg_mask, rifg_mask, lmfg_mask, rmfg_mask, lpt_mask,
-                         rpt_mask, lag_mask, rag_mask]
-            elif task == 'rhyme':
-                rois = ['whole brain', "broca's area", "frontal lobe", "planum temporale", "angular gyrus"]
-                masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lfront_mask, rfront_mask, lpt_mask, rpt_mask, lag_mask,
-                         rag_mask]
-            elif task == 'scenemem':
-                rois = ['mTL', 'hippocampus', 'amygdala', 'parahippocampal gyrus', 'entorhinal cortex']
-                masks = [lmtl_mask, rmtl_mask, lhc_mask, rhc_mask, lam_mask, ram_mask, lphg_mask, rphg_mask, lent_mask,
-                         rent_mask]
-            elif task == 'sentence':
-                rois = ['wb', "ba", "sup. TG", "mid. TG", "inf. TG", "pt", "ag"]
-                masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lstg_mask, rstg_mask, lmtg_mask, rmtg_mask, litg_mask,
-                         ritg_mask, lpt_mask, rpt_mask, lag_mask, rag_mask]
-            elif task == 'wordgen':
-                rois = ['whole brain', "broca's area", "superior frontal gyrus", "inferior frontal gyrus", "frontal lobe",
-                        "planum temporale", "angular gyrus"]
-                masks = [lhem_mask, rhem_mask, lba_mask, rba_mask, lsfg_mask, rsfg_mask, lifg_mask, rifg_mask, lfront_mask,
-                         rfront_mask, lpt_mask, rpt_mask, lag_mask, rag_mask]
+            temporal_rois = {
+                "superior TG": [lstg_mask, rstg_mask],
+                "middle TG": [lmtg_mask, rmtg_mask],
+                "inferior TG": [litg_mask, ritg_mask]
+            }
+            frontal_rois = {
+                "broca's area": [lba_mask, rba_mask],
+                "superior FG": [lsfg_mask, rsfg_mask],
+                "mid FG": [lmfg_mask, rmfg_mask],
+                "inf FG": [lifg_mask, rifg_mask],
+                "frontal lobe": [lfront_mask, rfront_mask]
+            }
+            misc_rois = {
+                "planum temporale": [lpt_mask, rpt_mask],
+                "angular gyrus": [lag_mask, rag_mask],
+                "heschl's gyrus": [lhsch_mask, rhsch_mask]
+            }
+            control_rois = {
+                "whole brain": [lhem_mask, rhem_mask],
+                "somatosensory cortex": [lssc_mask, rssc_mask],
+                "V1": [lv1_mask, rv1_mask]
+            }
+            scenemem_rois = {
+                "mTL": [lmtl_mask, rmtl_mask],
+                "hippocampus": [lhc_mask, rhc_mask],
+                "amygdala": [lam_mask, ram_mask],
+                "parahippocampal gyrus": [lphg_mask, rphg_mask],
+                "entorhinal cortex": [lent_mask, rent_mask],
+                "fusiform gyrus": [lffg_mask, rffg_mask]
+            }
+
+            roi_dict_list = [temporal_rois, frontal_rois, misc_rois, control_rois, scenemem_rois]
 
             # create a PostStats object for the current task. Add elements to the section based on the object's methods
-            post_stats = poststats.PostStats(sid, source_img, thresholded_img, task, rois, masks, all_rois, all_masks,
+            post_stats = poststats.PostStats(sid, source_img, thresholded_img, task, roi_dict_list,
                                              confounds, outputdir, datadir)
             sections.append(task_section_template.render(
                 section_name="task-" + task + "_run-" + run_number,  # the link that IDs this section for the nav bar
@@ -273,7 +276,7 @@ def generate_report():
                 gb_path=post_stats.create_glass_brain(),  # glass brain
                 viewer_path=post_stats.create_html_viewer(),  # interactive statistical map viewer
                 bar_path=post_stats.create_bar_plot(),  # bar plots
-                table=post_stats.generate_statistics_table(),  # statistics tables
+                table=post_stats.generate_statistics_table()[0],  # statistics tables
             ))
             post_stats.generate_csv_wrap(task)
 
@@ -290,28 +293,37 @@ if __name__ == "__main__":
     currdir = os.path.dirname(__file__)
 
     # define the masks
-    lhem_mask = os.path.join(datadir, "masks", "hem_left.nii.gz")
-    rhem_mask = os.path.join(datadir, "masks", "hem_right.nii.gz")
-    lba_mask = os.path.join(datadir, "masks", "ba_left.nii.gz")
-    rba_mask = os.path.join(datadir, "masks", "ba_right.nii.gz")
     lstg_mask = os.path.join(datadir, "masks", "stg_left.nii.gz")
     rstg_mask = os.path.join(datadir, "masks", "stg_right.nii.gz")
     lmtg_mask = os.path.join(datadir, "masks", "mtg_left.nii.gz")
     rmtg_mask = os.path.join(datadir, "masks", "mtg_right.nii.gz")
     litg_mask = os.path.join(datadir, "masks", "itg_left.nii.gz")
     ritg_mask = os.path.join(datadir, "masks", "itg_right.nii.gz")
+
+    lba_mask = os.path.join(datadir, "masks", "ba_left.nii.gz")
+    rba_mask = os.path.join(datadir, "masks", "ba_right.nii.gz")
     lsfg_mask = os.path.join(datadir, "masks", "sfg_left.nii.gz")
     rsfg_mask = os.path.join(datadir, "masks", "sfg_right.nii.gz")
-    lpt_mask = os.path.join(datadir, "masks", "pt_left.nii.gz")
     lmfg_mask = os.path.join(datadir, "masks", "mfg_left.nii.gz")
     rmfg_mask = os.path.join(datadir, "masks", "mfg_right.nii.gz")
     lifg_mask = os.path.join(datadir, "masks", "ifg_left.nii.gz")
     rifg_mask = os.path.join(datadir, "masks", "ifg_right.nii.gz")
+    rfront_mask = os.path.join(datadir, "masks", "frontal_right.nii.gz")
+    lfront_mask = os.path.join(datadir, "masks", "frontal_left.nii.gz")
+
+    lpt_mask = os.path.join(datadir, "masks", "pt_left.nii.gz")
     rpt_mask = os.path.join(datadir, "masks", "pt_right.nii.gz")
     lag_mask = os.path.join(datadir, "masks", "ang_left.nii.gz")
     rag_mask = os.path.join(datadir, "masks", "ang_right.nii.gz")
-    rfront_mask = os.path.join(datadir, "masks", "frontal_right.nii.gz")
-    lfront_mask = os.path.join(datadir, "masks", "frontal_left.nii.gz")
+    lhsch_mask = os.path.join(datadir, "masks", "heschl_left.nii.gz")
+    rhsch_mask = os.path.join(datadir, "masks", "heschl_right.nii.gz")
+
+    lv1_mask = os.path.join(datadir, "masks", "v1_left.nii.gz")
+    rv1_mask = os.path.join(datadir, "masks", "v1_right.nii.gz")
+    lssc_mask = os.path.join(datadir, "masks", "ssc_left.nii.gz")
+    rssc_mask = os.path.join(datadir, "masks", "ssc_right.nii.gz")
+    lhem_mask = os.path.join(datadir, "masks", "hem_left.nii.gz")
+    rhem_mask = os.path.join(datadir, "masks", "hem_right.nii.gz")
 
     mtl_mask = os.path.join(datadir, "masks", "mTL.nii.gz")
     lmtl_mask = os.path.join(datadir, "masks", "mTL_left.nii.gz")
@@ -324,6 +336,8 @@ if __name__ == "__main__":
     rphg_mask = os.path.join(datadir, "masks", "phg_right.nii.gz")
     lent_mask = os.path.join(datadir, "masks", "ento_left.nii.gz")
     rent_mask = os.path.join(datadir, "masks", "ento_right.nii.gz")
+    lffg_mask = os.path.join(datadir, "masks", "ffg_left.nii.gz")
+    rffg_mask = os.path.join(datadir, "masks", "ffg_right.nii.gz")
 
     template = os.path.join(datadir, "masks", "mni152.nii.gz")
 

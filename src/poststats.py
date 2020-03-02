@@ -12,6 +12,7 @@ import os
 import nipype.interfaces.fsl as fsl
 import nilearn.plotting
 import pandas as pd
+import seaborn as sns
 
 
 class PostStats:
@@ -19,22 +20,55 @@ class PostStats:
     Class to perform analyses on data
     """
 
-    def __init__(self, subject_id, source_img, img, task, rois, masks, all_rois, all_masks, confounds, outputdir, datadir):
+    def __init__(self, subject_id, source_img, img, task, roi_dict_list, confounds, outputdir, datadir):
         self.subject_id = subject_id
         self.source_img = source_img.path
         self.img = img
         self.task = task
         self.outputdir = outputdir
         self.taskdir = os.path.join(outputdir, self.task)
-        self.rois = rois  # a list of strings used as labels in plot
-        self.masks = masks  # masks to do statistics on
-        self.all_rois = all_rois
-        self.all_masks = all_masks
+
+        self.roi_dict_list = roi_dict_list  # list of dictionaries with key-value pairs of "ROI label": ['path/to/leftroimask.nii.gz', '/path/to/rightroimask.nii.gz']
+        self.temporal_dict = roi_dict_list[0]
+        self.frontal_dict = roi_dict_list[1]
+        self.misc_dict = roi_dict_list[2]
+        self.control_dict = roi_dict_list[3]
+        self.scenemem_dict = roi_dict_list[4]
+
         self.confounds = confounds  # confounds tsv (returned from setup())
         self.mtl_mask = os.path.join(datadir, "masks", "hpf_bin.nii.gz")
 
-        self.left_stats, self.right_stats,  self.leftns, self.rightns, self.ars, = self.calc_stats(self.masks)
-        self.all_left_stats, self.all_right_stats, self.all_leftns, self.all_rightns, self.all_ars = self.calc_stats(self.all_masks)
+        # Assemble lists
+        if self.task == 'scenemem':
+            # Calculate the statistics in each dictionary of regions
+            self.left_scene_stats, self.right_scene_stats, self.left_scene_ns, self.right_scene_ns, self.scene_ars = self.calc_stats(self.scenemem_dict)
+            # Define lists for later use constructing tables
+            self.left_stats_list = self.left_scene_stats
+            self.right_stats_list = self.right_scene_stats
+            self.left_ns_list = self.left_scene_ns
+            self.right_ns_list = self.right_scene_ns
+            self.ars = self.scene_ars
+        else:
+            # Calculate the statistics in each dictionary of regions
+            self.left_temp_stats, self.right_temp_stats, self.left_temp_ns, self.right_temp_ns, self.temp_ars = self.calc_stats( self.temporal_dict)
+            self.left_front_stats, self.right_front_stats, self.left_front_ns, self.right_front_ns, self.front_ars = self.calc_stats(self.frontal_dict)
+            self.left_misc_stats, self.right_misc_stats, self.left_misc_ns, self.right_misc_ns, self.misc_ars = self.calc_stats(self.misc_dict)
+            self.left_ctrl_stats, self.right_ctrl_stats, self.left_ctrl_ns, self.right_ctrl_ns, self.ctrl_ars = self.calc_stats(self.control_dict)
+            # Define lists for later use constructing tables
+            self.left_stats_list = self.left_temp_stats + self.left_front_stats + self.left_misc_stats + self.left_ctrl_stats
+            self.right_stats_list = self.right_temp_stats + self.right_front_stats + self.right_misc_stats + self.right_ctrl_stats
+            self.left_ns_list = self.left_temp_ns + self.left_front_ns + self.left_misc_ns + self.left_ctrl_ns
+            self.right_ns_list = self.right_temp_ns + self.right_front_ns + self.right_misc_ns + self.right_ctrl_ns
+            self.ars = self.temp_ars + self.front_ars + self.misc_ars + self.ctrl_ars
+
+        # # Get list of ROIs. First, loop through the dictionaries
+        self.lang_roi_list = []
+        for roi_dict in self.roi_dict_list[:-1]:  # all but last item
+            self.lang_roi_list = self.lang_roi_list + list(roi_dict.keys())  # then get all the keys, convert to list, and concatenate
+
+        self.scene_roi_list = []
+        for roi_dict in self.roi_dict_list[-1]:  # last item
+            self.scene_roi_list.append(roi_dict)  # will just be a list with one item
 
     def create_glass_brain(self):
         nilearn.plotting.plot_glass_brain(nilearn.image.smooth_img(self.img, 4),
@@ -78,38 +112,38 @@ class PostStats:
         else:
             return (left - right) / (left + right)
 
-    def calc_stats(self, masks):
+    def calc_stats(self, roi_dict):
         """
         Calculate activation statistics in the current list of ROIs
-        :param masks: the set of masks to calculate on
+        :param roi_dict: dictionary of ROI labels i.e. str as keys and list of L/R mask files i.e. list[str,str] as values
         :return: left_stats: list of statistics in the left hemisphere ROIs
                  right_stats: list of statistics in the right hemisphere ROIs
                  ars: list of asymmetry ratios for each ROI
         """
-        masks = masks
         vox = {}  # dictionary of mask: mask voxels
         res = {}  # dictionary of roi: percent activation
         n = {}  # dictionary of n activated voxels in ROI
-        mean = {}  # dictionary of mean z-score in ROI
         left_stats = []  # for plot
         right_stats = []
         leftns = []
         rightns = []
         ars = []  # list of asymmetry ratios for table
-        for mask in masks:  # order is important -- it must correspond with the ROI labels (self.rois)
-            roi = os.path.basename(mask).split('.')[0]
-            vox[roi] = self.get_mask_vox(mask)
-            res[roi] = round(self.get_roi_perc(mask, vox[roi]))
-            number = res[roi]
-            n[roi] = round(self.get_roi_activated_vox(mask))
-            number_of_voxels = n[roi]
+        for roi_label in roi_dict:  # loop through the keys (ROI labels)
+            mask_list = roi_dict[roi_label]
+            for mask in mask_list:
+                roi = os.path.basename(mask).split('.')[0]
+                vox[roi] = self.get_mask_vox(mask)
+                res[roi] = round(self.get_roi_perc(mask, vox[roi]))
+                number = res[roi]
+                n[roi] = round(self.get_roi_activated_vox(mask))
+                number_of_voxels = n[roi]
 
-            if "left" in roi:
-                left_stats.append(number)
-                leftns.append(number_of_voxels)
-            else:
-                right_stats.append(number)
-                rightns.append(number_of_voxels)
+                if "left" in roi:
+                    left_stats.append(number)
+                    leftns.append(number_of_voxels)
+                else:
+                    right_stats.append(number)
+                    rightns.append(number_of_voxels)
 
         for i in range(0, len(left_stats)):
             ar_result = round(self.calc_ar(left_stats[i], right_stats[i]), 2)
@@ -118,51 +152,92 @@ class PostStats:
         return left_stats, right_stats, leftns, rightns, ars
 
     def create_bar_plot(self):
-        # Bar graph
-        index = np.arange(len(self.left_stats))
-        bar_width = 0.2
-        opacity = 0.8
-        axes = plt.gca()
-        axes.set_ylim([0, 100])
+        # index = np.arange(len(self.left_stats))
+        # bar_width = 0.2
+        # opacity = 0.8
+        # axes = plt.gca()
+        # axes.set_ylim([0, 100])  # it's a percentage
+        #
+        # plt.bar(index, self.left_stats, bar_width,
+        #         alpha=opacity,
+        #         color='#4f6bb0',
+        #         label='Left')
+        # plt.bar(index + bar_width, self.right_stats, bar_width,
+        #         alpha=opacity,
+        #         color='#550824',
+        #         label='Right')
+        #
+        # plt.xlabel('ROI')
+        # plt.ylabel('% activated voxels in ROI')
+        # plt.title(self.task)
+        # plt.xticks(index + bar_width / 2, self.rois)
+        # plt.legend()
+        # plt.savefig(os.path.join(self.outputdir, self.task, 'figs', self.task + "_bar.svg"))
+        # plt.close()
 
-        plt.bar(index, self.left_stats, bar_width,
-                alpha=opacity,
-                color='#4f6bb0',
-                label='Left')
-        plt.bar(index + bar_width, self.right_stats, bar_width,
-                alpha=opacity,
-                color='#550824',
-                label='Right')
+        # Get table, a pandas Dataframe
+        df = self.generate_statistics_table()[1]
+        # Plot figure
+        if self.task == 'scenemem':
+            plt.figure(figsize=(9, 8))
+            a = sns.barplot(x="roi", y="percent", hue="hemisphere",palette=["gray", "firebrick"], data=df)
+            a.set_ylabel("Percent Activated Voxels in ROI")
+        else:
+            f, axes = plt.subplots(2, 2, figsize=(9, 8), sharex=False, sharey=True)
+            tmp = sns.barplot(x="roi", y="percent", hue="hemisphere", ax=axes[0, 0], palette=["slategrey", "darkslateblue"], data=df.loc[df['group'] == 'temporal'])
+            frnt = sns.barplot(x="roi", y="percent", hue="hemisphere", ax=axes[0, 1], palette=["slategrey", "darkslateblue"], data=df.loc[df['group'] == 'frontal'])
+            msc = sns.barplot(x="roi", y="percent", hue="hemisphere", ax=axes[1, 0], palette=["slategrey", "darkslateblue"], data=df.loc[df['group'] == 'misc'])
+            ctrl = sns.barplot(x="roi", y="percent", hue="hemisphere", ax=axes[1, 1], palette=["slategrey", "darkslateblue"], data=df.loc[df['group'] == 'control'])
+            for a in [frnt, msc, ctrl]:
+                a.get_legend().remove()
+            for a in [tmp, msc]:
+                a.set_ylabel("Percent Activated Voxels in ROI")
+            for a in [frnt, ctrl]:
+                a.set_ylabel('')
 
-        plt.xlabel('ROI')
-        plt.ylabel('% activated voxels in ROI')
-        plt.title(self.task)
-        plt.xticks(index + bar_width / 2, self.rois)
-        plt.legend()
+        plt.ylim(0, 100)
+        plt.tight_layout()
+        # plt.xticks(rotation=45)
         plt.savefig(os.path.join(self.outputdir, self.task, 'figs', self.task + "_bar.svg"))
         plt.close()
-
         plot_file = "./" + self.task + "/figs/" + self.task + "_bar.svg"
         return plot_file
 
     def generate_statistics_table(self):
-        row = self.rois
-        # table for HTML report
-        columns = ['left %', 'right %', 'LI']
-        data = np.array([self.left_stats, self.right_stats, self.ars]).transpose()
-        df = pd.DataFrame(data, index=row, columns=columns)
-        df.to_csv(os.path.join(self.outputdir, self.task, 'figs', self.task + "_html_table.csv"))
-        html_table = df.to_html()
+        # Construct two tables: one to display in html report, one as basis for the bar plot
+        if self.task == 'scenemem':
+            left_stats_list = self.left_scene_stats
+            right_stats_list = self.right_scene_stats
+            ars_list = self.scene_ars
+            hem_list = ['left'] * 6 + ['right'] * 6
+            group_list = ['scenemem'] * 12
+            list_of_rois = self.scene_roi_list
+        else:
+            left_stats_list = self.left_temp_stats + self.left_front_stats + self.left_misc_stats + self.left_ctrl_stats
+            right_stats_list = self.right_temp_stats + self.right_front_stats + self.right_misc_stats + self.right_ctrl_stats
+            ars_list = self.temp_ars + self.front_ars + self.misc_ars + self.ctrl_ars
+            hem_list = ['left'] * 14 + ['right'] * 14
+            group_list = ['temporal'] * 3 + ['frontal'] * 5 + ['misc'] * 3 + ['control'] * 3
+            group_list = group_list * 2
+            list_of_rois = self.lang_roi_list
 
-        return html_table
+        stats_list = self.left_stats_list + self.right_stats_list
+        d4plot = {'roi': list_of_rois * 2, 'percent': stats_list, 'hemisphere': hem_list, 'group': group_list}
+        d4table = {'Left %': left_stats_list, 'Right %': right_stats_list, 'Laterality Index': ars_list}
+        df4plot = pd.DataFrame(data=d4plot)
+        df4table = pd.DataFrame(data=d4table, index=list_of_rois)
+        df4table.to_csv(os.path.join(self.outputdir, self.task, 'figs', self.task + "_html_table.csv"))
+        html_table = df4table.to_html()
+
+        return html_table, df4plot
 
     def generate_csv(self, left_stats, right_stats, leftns, rightns, ars, rois):
         # table for csv output
-        tSNR = self.calc_iqms()[0]
-        FD = self.calc_iqms()[1]
+        t_snr = self.calc_iqms()[0]
+        fd = self.calc_iqms()[1]
 
         # Create lists of labels for each region: e.g. hemisphere left %, broca's left %, hemisphere right%, broca's right % etc.
-        column_labels = []
+        # column_labels = []
         left_per = []
         right_per = []
         left_n = []
@@ -178,7 +253,7 @@ class PostStats:
             sum_labels.append(region + ' sum')
         column_labels = ['subject'] + ['task'] + left_per + right_per + li_labels + left_n + right_n + sum_labels + ['FramewiseDisplacement'] + ['tSNR']
         sums = [sum(x) for x in zip(leftns, rightns)]
-        row = [self.subject_id] + [self.task] + left_stats + right_stats + ars + leftns + rightns + sums + [FD] + [tSNR]
+        row = [self.subject_id] + [self.task] + left_stats + right_stats + ars + leftns + rightns + sums + [fd] + [t_snr]
         data = np.array([row])
         df = pd.DataFrame(data, columns=column_labels)
         df.set_index('subject', inplace=True)
@@ -186,9 +261,9 @@ class PostStats:
 
     def generate_csv_wrap(self, task):
         if task == 'scenemem':
-            self.generate_csv(self.left_stats, self.right_stats, self.leftns, self.rightns, self.ars, self.rois)
+            self.generate_csv(self.left_stats_list, self.right_stats_list, self.left_ns_list, self.right_ns_list, self.ars, self.scene_roi_list)
         else:
-            self.generate_csv(self.all_left_stats, self.all_right_stats, self.all_leftns, self.all_rightns, self.all_ars, self.all_rois)
+            self.generate_csv(self.left_stats_list, self.right_stats_list, self.left_ns_list, self.right_ns_list, self.ars, self.lang_roi_list)
 
     def calc_iqms(self):
         # tSNR
