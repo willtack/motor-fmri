@@ -32,6 +32,16 @@ RUN apt-get update && \
                     nodejs && \
     apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
+# Installing and setting up miniconda
+RUN curl -sSLO https://repo.continuum.io/miniconda/Miniconda3-4.5.11-Linux-x86_64.sh && \
+    bash Miniconda3-4.5.11-Linux-x86_64.sh -b -p /usr/local/miniconda && \
+    rm Miniconda3-4.5.11-Linux-x86_64.sh
+
+ENV PATH=/usr/local/miniconda/bin:$PATH \
+    LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
+    PYTHONNOUSERSITE=1
+
 # Installing Neurodebian packages (FSL, AFNI, git)
 RUN curl -sSL "http://neuro.debian.net/lists/$( lsb_release -c | cut -f2 ).us-ca.full" >> /etc/apt/sources.list.d/neurodebian.sources.list && \
     apt-key add /usr/local/etc/neurodebian.gpg && \
@@ -57,16 +67,6 @@ ENV FSLDIR="/usr/share/fsl/5.0" \
     AFNI_TTATLAS_DATASET="/usr/share/afni/atlases" \
     AFNI_PLUGINPATH="/usr/lib/afni/plugins"
 ENV PATH="/usr/lib/fsl/5.0:/usr/lib/afni/bin:$PATH"
-
-# Installing and setting up miniconda
-RUN curl -sSLO https://repo.continuum.io/miniconda/Miniconda3-4.5.11-Linux-x86_64.sh && \
-    bash Miniconda3-4.5.11-Linux-x86_64.sh -b -p /usr/local/miniconda && \
-    rm Miniconda3-4.5.11-Linux-x86_64.sh
-
-ENV PATH=/usr/local/miniconda/bin:$PATH \
-    LANG=C.UTF-8 \
-    LC_ALL=C.UTF-8 \
-    PYTHONNOUSERSITE=1
 
 # Installing precomputed python packages
 RUN conda install -y python=3.7.1 \
