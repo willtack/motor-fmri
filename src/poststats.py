@@ -179,8 +179,8 @@ class PostStats:
         df = self.generate_statistics_table()[1]
         # Plot figure
         if self.task == 'scenemem':
-            plt.figure(figsize=(9, 8))
-            a = sns.barplot(x="roi", y="percent", hue="hemisphere",palette=["gray", "firebrick"], data=df)
+            plt.figure(figsize=(8, 7))
+            a = sns.barplot(x="roi", y="percent", hue="hemisphere", palette=["gray", "firebrick"], data=df)
             a.set_ylabel("Percent Activated Voxels in ROI")
         else:
             f, axes = plt.subplots(2, 2, figsize=(9, 8), sharex=False, sharey=True)

@@ -231,34 +231,34 @@ def generate_report():
             thresholded_img = modelfit.model_fitting(source_epi, input_functional, info, aroma, task, args, mask_file, i)
 
             temporal_rois = {
-                "superior TG": [lstg_mask, rstg_mask],
-                "middle TG": [lmtg_mask, rmtg_mask],
-                "inferior TG": [litg_mask, ritg_mask]
+                "Superior TG": [lstg_mask, rstg_mask],
+                "Middle TG": [lmtg_mask, rmtg_mask],
+                "Inferior TG": [litg_mask, ritg_mask]
             }
             frontal_rois = {
-                "broca's area": [lba_mask, rba_mask],
-                "superior FG": [lsfg_mask, rsfg_mask],
-                "mid FG": [lmfg_mask, rmfg_mask],
-                "inf FG": [lifg_mask, rifg_mask],
-                "frontal lobe": [lfront_mask, rfront_mask]
+                "Broca's Area": [lba_mask, rba_mask],
+                "Sup FG": [lsfg_mask, rsfg_mask],
+                "Mid FG": [lmfg_mask, rmfg_mask],
+                "Inf FG": [lifg_mask, rifg_mask],
+                "Frontal Lobe": [lfront_mask, rfront_mask]
             }
             misc_rois = {
-                "planum temporale": [lpt_mask, rpt_mask],
-                "angular gyrus": [lag_mask, rag_mask],
-                "heschl's gyrus": [lhsch_mask, rhsch_mask]
+                "Planum Temporale": [lpt_mask, rpt_mask],
+                "Angular Gyrus": [lag_mask, rag_mask],
+                "Heschl's Gyrus": [lhsch_mask, rhsch_mask]
             }
             control_rois = {
-                "whole brain": [lhem_mask, rhem_mask],
-                "somatosensory cortex": [lssc_mask, rssc_mask],
+                "Whole Brain": [lhem_mask, rhem_mask],
+                "Somatosensory Cortex": [lssc_mask, rssc_mask],
                 "V1": [lv1_mask, rv1_mask]
             }
             scenemem_rois = {
                 "mTL": [lmtl_mask, rmtl_mask],
-                "hippocampus": [lhc_mask, rhc_mask],
-                "amygdala": [lam_mask, ram_mask],
-                "parahippocampal gyrus": [lphg_mask, rphg_mask],
-                "entorhinal cortex": [lent_mask, rent_mask],
-                "fusiform gyrus": [lffg_mask, rffg_mask]
+                "Hippocampus": [lhc_mask, rhc_mask],
+                "Amygdala": [lam_mask, ram_mask],
+                "Parahippocampal": [lphg_mask, rphg_mask],
+                "Entorhinal cortex": [lent_mask, rent_mask],
+                "Fusiform gyrus": [lffg_mask, rffg_mask]
             }
 
             roi_dict_list = [temporal_rois, frontal_rois, misc_rois, control_rois, scenemem_rois]
