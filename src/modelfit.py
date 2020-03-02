@@ -118,21 +118,16 @@ def model_fitting(source_img, prepped_img, subject_info, aroma, task, args, mask
     nibabel.save(fdr_thresh_img, fdr_thresh_img_path)
 
     # Do a cluster analysis using the FDR corrected threshold on the original z_img
+    print("Performing cluster analysis.")
     cl = fsl.Cluster(in_file=z_img, threshold=fdr_threshold)
     cluster_file = os.path.join(taskdir, 'stats', task + "_cluster_stats.txt")
     cluster_analysis(cluster_file, cl)
 
     # Resample the result image with AFNI
     resample_fdr_thresh_img_path = os.path.join(taskdir, task + '_fdr_thresholded_z_resample.nii.gz')
-    if aroma:
-        print("Resampling thresholded image to RPI orientation")
-        resample = afni.Resample(orientation='RPI', out_file=resample_fdr_thresh_img_path, in_file=fdr_thresh_img_path)
-        resample_run = resample.run()
-    else:
-        print("Resampling thresholded image to MNI space")
-        resample = afni.Resample(master=template, out_file=resample_fdr_thresh_img_path, in_file=fdr_thresh_img_path)
-        resample_run = resample.run()
-
+    print("Resampling thresholded image to MNI space")
+    resample = afni.Resample(master=template, out_file=resample_fdr_thresh_img_path, in_file=fdr_thresh_img_path)
+    resample.run()
     os.remove(fdr_thresh_img_path)
 
     print("Image to be returned: " + resample_fdr_thresh_img_path)
