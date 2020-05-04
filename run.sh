@@ -49,14 +49,14 @@ ls -R ${BIDS_DIR}
 echo "$CONTAINER  Starting..."
 
 # Get the list of tasks based on what's in the bids dataset
-TASK_LIST=$(python ${CODE_BASE}/filter_tasks.py --bidsdir ${BIDS_DIR})
+TASK_LIST=$(/usr/local/miniconda/bin/python3 ${CODE_BASE}/filter_tasks.py --bidsdir ${BIDS_DIR})
 
 # Position fmriprepdir contents
 # See if it's already been extracted (for testing purposes). If not, unzip and look in the appropriate location
 FMRIPREP_DIR=$(find $(pwd) -maxdepth 3 -type d | grep -E -v bids | grep -E -v fmriprepdir | grep -E fmriprep)
 if [[ ! -d ${FMRIPREP_DIR} ]]; then
   unzip ${INPUT_DIR}/fmriprepdir/*.zip -d ${INPUT_DIR}
-  FMRIPREP_DIR=$(find $(pwd) -maxdepth 2 -type d | grep -E -v bids | grep -E -v fmriprepdir | grep -E fmriprep)
+  FMRIPREP_DIR=$(find $(pwd) -maxdepth 3 -type d | grep -E -v bids | grep -E -v fmriprepdir | grep -E fmriprep)
 fi
 
 # Copy event files to bids dataset
@@ -72,7 +72,6 @@ cp -r ${FLYWHEEL_BASE}/imgs "${RESULTS_DIR}"/
 
 # Arg parsing
 config_aroma="$(parse_config 'AROMA')"
-config_lite="$(parse_config 'light_output')"
 config_fwhm="$(parse_config 'fwhm')"
 config_cthresh="$(parse_config 'cluster_size_thresh')"
 config_alpha="$(parse_config 'alpha')"
@@ -83,9 +82,9 @@ if [[ $config_aroma == 'false' ]]; then aroma_FLAG=''; else aroma_FLAG='--aroma'
                                            --fmriprepdir "${FMRIPREP_DIR}" \
                                            --outputdir "${RESULTS_DIR}"    \
                                            --tasks "${TASK_LIST}"  \
-                                           --fwhm "$config_fwhm" \
-                                           --cthresh "$config_cthresh" \
-                                           --alpha "$config_alpha" \
+                                           --fwhm "${config_fwhm}" \
+                                           --cthresh "${config_cthresh}" \
+                                           --alpha "${config_alpha}" \
                                             ${aroma_FLAG} \
                                             || error_exit "$CONTAINER Main script failed! Check traceback above."
 
@@ -95,15 +94,16 @@ cleanup
 
 # Copy html report to its own directory
 HTML_DIR=${OUTPUT_DIR}/"${SUB_ID}"_report_html
-mkdir "${HTML_DIR}"
+mkdir -p "${HTML_DIR}"
 cp "${RESULTS_DIR}"/"${SUB_ID}"_report.html "${HTML_DIR}"
+mv "${HTML_DIR}"/"${SUB_ID}"_report.html "${HTML_DIR}"/index.html
 for task in ${TASK_LIST}; do
   mkdir "${HTML_DIR}"/"${task}"
   cp -r $(find "${RESULTS_DIR}"/"${task}" -type d  | grep -E figs) "${HTML_DIR}"/"${task}"
 done
 cp -r ${FLYWHEEL_BASE}/imgs "${HTML_DIR}"
-cd ${OUTPUT_DIR} && \
-  zip -r ${OUTPUT_DIR}/"${SUB_ID}"_report_html.zip "${SUB_ID}"_report_html && \
+cd ${OUTPUT_DIR}/"${SUB_ID}"_report_html && \
+  zip -r ${OUTPUT_DIR}/"${SUB_ID}"_report.html.zip ./* && \
   cd ${FLYWHEEL_BASE} || echo "Unable to zip html directory."
 rm -rf "${HTML_DIR}"
 
@@ -122,7 +122,7 @@ cp "${RESULTS_DIR}"/scenemem/scenemem_data.csv ${OUTPUT_DIR}/"${SUB_ID}_scenemem
 
 # Position results directory as zip file in /flywheel/v0/output
 if [[ $config_lite == 'false' ]]; then
-  zip -r "${SUB_ID}"_report_results.zip "${SUB_ID}"_report_results
+  zip -r "${SUB_ID}"_report_results.zip "${SUB_ID}"_report_results/*
   mv "${SUB_ID}"_report_results.zip ${OUTPUT_DIR}/
 fi
 
