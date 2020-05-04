@@ -87,12 +87,12 @@ RUN conda install -y python=3.7.1 \
     conda build purge-all; sync && \
     conda clean -tipsy && sync
 
-RUN pip install flywheel-sdk pandas
+RUN pip install 'flywheel-sdk==10.*'
+RUN pip install pandas
+RUN pip install pybids
 RUN pip install --no-cache fw-heudiconv \
-    && pip install --no-cache flywheel-sdk \
     && pip install --no-cache nipype \
     && pip install --no-cache nilearn \
-    && pip install --no-cache pybids \
     && pip install --no-cache jinja2 \
     && pip install --no-cache argparse \
     && pip install --no-cache nibabel \
@@ -109,9 +109,13 @@ RUN apt-get update -y
 RUN apt-get upgrade -y
 RUN apt-get install -y unzip
 
-WORKDIR /flywheel/v0
-
 RUN conda install matplotlib
 RUN conda install scikit-learn
 RUN apt-get install -y libcairo2-dev
 RUN apt-get install -y pango-1.0
+
+# ENV preservation for Flywheel Engine
+RUN env -u HOSTNAME -u PWD | \
+  awk -F = '{ print "export " $1 "=\"" $2 "\"" }' > ${FLYWHEEL}/docker-env.sh
+
+WORKDIR /flywheel/v0
