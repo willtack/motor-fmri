@@ -34,7 +34,7 @@ def setup(taskname, source_img, run_number):
                               "ses-" + source_img.entities['session'], "func",
                               "sub-" + source_img.entities['subject'] + "_ses-" + source_img.entities[
                                   'session'] + "_task-" + taskname + "_run-" + run_number +
-                              "_space-MNI152NLin2009cAsym_desc-smoothAROMAnonaggr_bold.nii.gz")
+                              "_space-MNI152NLin6Asym_desc-smoothAROMAnonaggr_bold.nii.gz")
 
     simple_design = False
     confounds = ''
@@ -73,7 +73,7 @@ def setup(taskname, source_img, run_number):
                                    "ses-" + source_img.entities['session'], "func",
                                    "sub-" + source_img.entities['subject'] + "_ses-" + source_img.entities[
                                        'session'] + "_task-" + taskname + "_run-" + run_number +
-                                   "_space-MNI152NLin2009cAsym_desc-smoothAROMAnonaggr_bold.nii.gz")
+                                   "_space-MNI152NLin6Asym_desc-smoothAROMAnonaggr_bold.nii.gz")
     else:
         if simple_design:
             subject_info = [Bunch(conditions=[taskname],
