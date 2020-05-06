@@ -20,7 +20,7 @@ def model_fitting(source_img, prepped_img, subject_info, aroma, task, args, mask
 
     # Make a task directory in the output folder
     if run_number > 0:
-        taskdir = os.path.join(outputdir, task + "_run-0" + str(run_number+1))
+        taskdir = os.path.join(outputdir, task + "_run-0" + str(run_number + 1))
     else:
         taskdir = os.path.join(outputdir, task)
 
@@ -60,8 +60,8 @@ def model_fitting(source_img, prepped_img, subject_info, aroma, task, args, mask
     level1design = pe.Node(interface=fsl.Level1Design(), name="level1design")
     modelgen = pe.MapNode(interface=fsl.FEATModel(), name='modelgen', iterfield=['fsf_file', 'ev_files'])
     modelestimate = pe.MapNode(interface=fsl.FILMGLS(smooth_autocorr=True, mask_size=5), name='modelestimate',
-                               iterfield=['design_file', 'in_file', 'tcon_file'])
-    merge_contrasts = pe.MapNode(interface=util.Merge(2), name='merge_contrasts', iterfield=['in1'])
+                               iterfield=['design_file', 'in_file', 'threshold'])
+    glm = pe.MapNode(interface=fsl.GLM(mask=mask_file, output_type='NIFTI_GZ', out_z_name=os.path.join(taskdir, task + '_z.nii.gz')), name='glm', iterfield=['contrasts', 'in_file', 'design'])
     outputspec = pe.Node(
         util.IdentityInterface(fields=['copes', 'varcopes', 'dof_file', 'zfiles', 'parameter_estimates']),
         name='outputspec')
@@ -72,16 +72,12 @@ def model_fitting(source_img, prepped_img, subject_info, aroma, task, args, mask
          [('interscan_interval', 'interscan_interval'), ('session_info', 'session_info'), ('contrasts', 'contrasts'),
           ('bases', 'bases'), ('model_serial_correlations', 'model_serial_correlations')]),
         (inputspec, modelestimate, [('film_threshold', 'threshold'), ('functional_data', 'in_file')]),
+        (inputspec, glm, [('functional_data', 'in_file')]),
         (level1design, modelgen, [('fsf_files', 'fsf_file'), ('ev_files', 'ev_files')]),
         (modelgen, modelestimate, [('design_file', 'design_file')]),
-        (merge_contrasts, outputspec, [('out', 'zfiles')]),
-        (modelestimate, outputspec, [('param_estimates', 'parameter_estimates'), ('dof_file', 'dof_file')]),
-    ])
-
-    modelfit.connect([
-        (modelgen, modelestimate, [('con_file', 'tcon_file'), ('fcon_file', 'fcon_file')]),
-        (modelestimate, merge_contrasts, [('zstats', 'in1'), ('zfstats', 'in2')]),
-        (modelestimate, outputspec, [('copes', 'copes'), ('varcopes', 'varcopes')]),
+        (modelgen, glm, [('con_file', 'contrasts'), ('design_file', 'design')]),
+        (glm, outputspec, [('out_cope', 'copes'), ('out_varcb', 'varcopes'), ('out_z', 'zfiles')]),
+        (modelestimate, outputspec, [('param_estimates', 'parameter_estimates'), ('dof_file', 'dof_file')])
     ])
 
     # Define inputs to workflow
@@ -104,8 +100,7 @@ def model_fitting(source_img, prepped_img, subject_info, aroma, task, args, mask
     output_txt = open(os.path.join(taskdir, task + '_outputs.txt'), 'w')
     print_outputs(output_txt, res)
 
-    # The third node, FILM's, first element (i.e. only element) of its 'zstats' output
-    z_img = list(res.nodes)[2].result.outputs.zstats[0]
+    z_img = os.path.join(taskdir, task + '_z.nii.gz')
 
     # Use False Discovery Rate theory to correct for multiple comparisons
     fdr_thresh_img, fdr_threshold = thresholding.map_threshold(stat_img=z_img,
@@ -155,10 +150,16 @@ def cluster_analysis(cluster_file, cluster_run):
 
 
 def preprocess(aroma_config, fwhm_config, input_img, mask_file, taskdir, task):
+    # Resample to mask space
+    # This is for AROMA images. Does it hurt non-AROMA?
+    resample_path = os.path.join(taskdir, task + '_resample.nii.gz')
+    resample = afni.Resample(master=mask_file, out_file=resample_path, in_file=input_img)
+    resample_run = resample.run()
+
     # Apply fmriprep-calculated brain mask to the functional image
     masked_file_path = os.path.join(taskdir, task + "_input_functional_masked.nii.gz")
     applymask = fsl.ApplyMask(mask_file=mask_file, out_file=masked_file_path)
-    applymask.inputs.in_file = input_img
+    applymask.inputs.in_file = resample_run.outputs.out_file
     mask_run = applymask.run()
     masked_input = masked_file_path
 
