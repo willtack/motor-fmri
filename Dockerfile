@@ -25,6 +25,7 @@ RUN apt-get update && \
                     pkg-config \
                     jq \
                     zip \
+                    unzip \
                     nano \
                     git && \
     curl -sL https://deb.nodesource.com/setup_10.x | bash - && \
@@ -55,18 +56,19 @@ RUN apt-get update && \
                     git-annex-standalone && \
     apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-ENV FSLDIR="/usr/share/fsl/5.0" \
+ENV FSLDIR=/usr/share/fsl/5.0 \
+    PATH=/usr/share/fsl/5.0:${PATH} \
+    PATH=/usr/share/fsl/5.0/bin:${PATH} \
     FSLOUTPUTTYPE="NIFTI_GZ" \
     FSLMULTIFILEQUIT="TRUE" \
-    POSSUMDIR="/usr/share/fsl/5.0" \
-    LD_LIBRARY_PATH="/usr/lib/fsl/5.0:$LD_LIBRARY_PATH" \
-    FSLTCLSH="/usr/bin/tclsh" \
-    FSLWISH="/usr/bin/wish" \
-    AFNI_MODELPATH="/usr/lib/afni/models" \
-    AFNI_IMSAVE_WARNINGS="NO" \
-    AFNI_TTATLAS_DATASET="/usr/share/afni/atlases" \
-    AFNI_PLUGINPATH="/usr/lib/afni/plugins"
-ENV PATH="/usr/lib/fsl/5.0:/usr/lib/afni/bin:$PATH"
+    LD_LIBRARY_PATH="/usr/share/fsl/5.0/bin:$LD_LIBRARY_PATH"
+
+ENV AFNI_INSTALLDIR=/usr/lib/afni \
+    PATH=/usr/lib/afni/bin:${PATH} \
+    AFNI_PLUGINPATH=/usr/lib/afni/plugins \
+    AFNI_MODELPATH=/usr/lib/afni/models \
+    AFNI_TTATLAS_DATASET=/usr/share/afni/atlases \
+    AFNI_IMSAVE_WARNINGS=NO
 
 # Installing precomputed python packages
 RUN conda install -y python=3.7.1 \
@@ -81,6 +83,7 @@ RUN conda install -y python=3.7.1 \
                      libxml2=2.9.9 \
                      graphviz=2.40.1 \
                      traits=4.6.0 \
+                     jinja2=2.11.2 \
                      zlib; sync &&  \
     chmod -R a+rX /usr/local/miniconda; sync && \
     chmod +x /usr/local/miniconda/bin/*; sync && \
@@ -94,25 +97,22 @@ RUN pip install --no-cache fw-heudiconv \
     && pip install --no-cache nipype \
     && pip install --no-cache nilearn \
     && pip install --no-cache jinja2 \
-    && pip install --no-cache argparse \
     && pip install --no-cache nibabel \
-    && pip install --no-cache nistats \
-    && pip install --no-cache cairocffi \
-    && pip install --no-cache weasyprint
+    && pip install --no-cache nistats
 
 COPY manifest.json ${FLYWHEEL}/manifest.json
 COPY run.sh /flywheel/v0/run.sh
 COPY . /flywheel/v0/
 RUN chmod +x ${FLYWHEEL}/*
 
-RUN apt-get update -y
-RUN apt-get upgrade -y
-RUN apt-get install -y unzip
+# RUN apt-get update -y
+# RUN apt-get upgrade -y
+# RUN apt-get install -y unzip
 
-RUN conda install matplotlib
-RUN conda install scikit-learn
-RUN apt-get install -y libcairo2-dev
-RUN apt-get install -y pango-1.0
+# RUN conda install matplotlib
+# RUN conda install scikit-learn
+# RUN apt-get install -y libcairo2-dev
+# RUN apt-get install -y pango-1.0
 
 # ENV preservation for Flywheel Engine
 RUN env -u HOSTNAME -u PWD | \
