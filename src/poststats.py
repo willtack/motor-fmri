@@ -6,6 +6,7 @@
 #
 
 import matplotlib.pyplot as plt
+plt.switch_backend('agg')
 import numpy as np
 from nipype.algorithms.confounds import TSNR
 import os
