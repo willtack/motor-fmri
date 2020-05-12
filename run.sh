@@ -121,10 +121,9 @@ cp "${SUB_ID}_language_data.csv" ${OUTPUT_DIR}/
 cp "${RESULTS_DIR}"/scenemem/scenemem_data.csv ${OUTPUT_DIR}/"${SUB_ID}_scenemem_data.csv"
 
 # Position results directory as zip file in /flywheel/v0/output
-if [[ $config_lite == 'false' ]]; then
-  zip -r "${SUB_ID}"_report_results.zip "${SUB_ID}"_report_results/*
-  mv "${SUB_ID}"_report_results.zip ${OUTPUT_DIR}/
-fi
+zip -r "${SUB_ID}"_report_results.zip "${SUB_ID}"_report_results/*
+mv "${SUB_ID}"_report_results.zip ${OUTPUT_DIR}/
+
 
 rm -rf "${RESULTS_DIR}" || echo "No results directory to delete."
 
