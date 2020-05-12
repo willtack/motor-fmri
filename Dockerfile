@@ -61,7 +61,7 @@ ENV FSLDIR=/usr/share/fsl/5.0 \
     PATH=/usr/share/fsl/5.0/bin:${PATH} \
     FSLOUTPUTTYPE="NIFTI_GZ" \
     FSLMULTIFILEQUIT="TRUE" \
-    LD_LIBRARY_PATH="/usr/share/fsl/5.0/bin:$LD_LIBRARY_PATH"
+    LD_LIBRARY_PATH="/usr/lib/fsl/5.0:$LD_LIBRARY_PATH"
 
 ENV AFNI_INSTALLDIR=/usr/lib/afni \
     PATH=/usr/lib/afni/bin:${PATH} \

@@ -60,8 +60,8 @@ def model_fitting(source_img, prepped_img, subject_info, aroma, task, args, mask
     level1design = pe.Node(interface=fsl.Level1Design(), name="level1design")
     modelgen = pe.MapNode(interface=fsl.FEATModel(), name='modelgen', iterfield=['fsf_file', 'ev_files'])
     modelestimate = pe.MapNode(interface=fsl.FILMGLS(smooth_autocorr=True, mask_size=5), name='modelestimate',
-                               iterfield=['design_file', 'in_file', 'threshold'])
-    glm = pe.MapNode(interface=fsl.GLM(mask=mask_file, output_type='NIFTI_GZ', out_z_name=os.path.join(taskdir, task + '_z.nii.gz')), name='glm', iterfield=['contrasts', 'in_file', 'design'])
+                               iterfield=['design_file', 'in_file', 'tcon_file'])
+    merge_contrasts = pe.MapNode(interface=util.Merge(2), name='merge_contrasts', iterfield=['in1'])
     outputspec = pe.Node(
         util.IdentityInterface(fields=['copes', 'varcopes', 'dof_file', 'zfiles', 'parameter_estimates']),
         name='outputspec')
@@ -72,12 +72,16 @@ def model_fitting(source_img, prepped_img, subject_info, aroma, task, args, mask
          [('interscan_interval', 'interscan_interval'), ('session_info', 'session_info'), ('contrasts', 'contrasts'),
           ('bases', 'bases'), ('model_serial_correlations', 'model_serial_correlations')]),
         (inputspec, modelestimate, [('film_threshold', 'threshold'), ('functional_data', 'in_file')]),
-        (inputspec, glm, [('functional_data', 'in_file')]),
         (level1design, modelgen, [('fsf_files', 'fsf_file'), ('ev_files', 'ev_files')]),
         (modelgen, modelestimate, [('design_file', 'design_file')]),
-        (modelgen, glm, [('con_file', 'contrasts'), ('design_file', 'design')]),
-        (glm, outputspec, [('out_cope', 'copes'), ('out_varcb', 'varcopes'), ('out_z', 'zfiles')]),
-        (modelestimate, outputspec, [('param_estimates', 'parameter_estimates'), ('dof_file', 'dof_file')])
+        (merge_contrasts, outputspec, [('out', 'zfiles')]),
+        (modelestimate, outputspec, [('param_estimates', 'parameter_estimates'), ('dof_file', 'dof_file')]),
+    ])
+
+    modelfit.connect([
+        (modelgen, modelestimate, [('con_file', 'tcon_file'), ('fcon_file', 'fcon_file')]),
+        (modelestimate, merge_contrasts, [('zstats', 'in1'), ('zfstats', 'in2')]),
+        (modelestimate, outputspec, [('copes', 'copes'), ('varcopes', 'varcopes')]),
     ])
 
     # Define inputs to workflow
@@ -100,7 +104,8 @@ def model_fitting(source_img, prepped_img, subject_info, aroma, task, args, mask
     output_txt = open(os.path.join(taskdir, task + '_outputs.txt'), 'w')
     print_outputs(output_txt, res)
 
-    z_img = os.path.join(taskdir, task + '_z.nii.gz')
+    # The third node, FILM's, first element (i.e. only element) of its 'zstats' output
+    z_img = list(res.nodes)[2].result.outputs.zstats[0]
 
     # Use False Discovery Rate theory to correct for multiple comparisons
     fdr_thresh_img, fdr_threshold = thresholding.map_threshold(stat_img=z_img,

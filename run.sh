@@ -38,6 +38,8 @@ function cleanup {
 	rm ${FLYWHEEL_BASE}/*.csv || echo "CSVs not found. No need to remove."
 }
 
+# Transfer Docker ENVs to Flywheel Environment
+source ${FLYWHEEL_BASE}/docker-env.sh
 
 # Download a BIDs directory using fw-heudiconv
 BIDS_DIR=${INPUT_DIR}/bids_dataset
