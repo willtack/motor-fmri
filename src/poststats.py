@@ -76,7 +76,7 @@ class PostStats:
                                           output_file=os.path.join(self.outputdir, self.task, 'figs', self.task + "_gb.svg"),
                                           display_mode='lyrz', colorbar=True, plot_abs=False, threshold=0)
 
-        out_svg = '/'.join(('.', self.task, "figs", self.task+"_gb.svg"))
+        out_svg = '"' + '/'.join(('.', self.task, "figs", self.task+"_gb.svg")) + '"'
         return out_svg
 
     def get_mask_vox(self, msk):
@@ -201,7 +201,7 @@ class PostStats:
         # plt.xticks(rotation=45)
         plt.savefig(os.path.join(self.outputdir, self.task, 'figs', self.task + "_bar.svg"))
         plt.close()
-        plot_file = '/'.join(('.', self.task, 'figs', self.task+"_bar.svg"))
+        plot_file = '"' + '/'.join(('.', self.task, 'figs', self.task+"_bar.svg")) + '"'
         return plot_file
 
     def generate_statistics_table(self):
@@ -293,5 +293,5 @@ class PostStats:
                                               title=self.task)
         html_view.save_as_html(os.path.join(self.outputdir, self.task, 'figs', self.task + "_viewer.html"))
         viewer_file = self.task + "/figs/" + self.task + "_viewer.html"
-        viewer_file = '/'.join(('.', self.task, 'figs', self.task+"_viewer.html"))
+        viewer_file = '"' + '/'.join(('.', self.task, 'figs', self.task+"_viewer.html")) + '"'
         return viewer_file
