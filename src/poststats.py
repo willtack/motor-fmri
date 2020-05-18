@@ -292,6 +292,5 @@ class PostStats:
         html_view = nilearn.plotting.view_img(self.img, threshold=0, bg_img=mean_img_path, vmax=10,
                                               title=self.task)
         html_view.save_as_html(os.path.join(self.outputdir, self.task, 'figs', self.task + "_viewer.html"))
-        viewer_file = self.task + "/figs/" + self.task + "_viewer.html"
         viewer_file = '"' + '/'.join(('.', self.task, 'figs', self.task+"_viewer.html")) + '"'
         return viewer_file
