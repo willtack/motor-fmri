@@ -120,7 +120,7 @@ done
 
 sed -n '1~2!p' "$out_csv_file" > "${SUB_ID}_language_data.csv" # delete the headers (every other row)
 cp "${SUB_ID}_language_data.csv" ${OUTPUT_DIR}/
-cp "${RESULTS_DIR}"/scenemem/scenemem_data.csv ${OUTPUT_DIR}/"${SUB_ID}_scenemem_data.csv"
+cp "${RESULTS_DIR}"/scenemem/stats/scenemem_data.csv ${OUTPUT_DIR}/"${SUB_ID}_scenemem_data.csv"
 
 # Position results directory as zip file in /flywheel/v0/output
 zip -r "${SUB_ID}"_report_results.zip "${SUB_ID}"_report_results/*
