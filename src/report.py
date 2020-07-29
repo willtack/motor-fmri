@@ -223,6 +223,13 @@ def generate_report():
         for i in range(0, len(run_list)):
             source_img = run_list[i]
             run_number = "0" + str(i + 1)
+
+            # determine full task name from BIDS meta data
+            metadata = source_img.entities
+            taskname = task
+            if 'TaskName' in metadata and metadata['TaskName']:
+                taskname = metadata['TaskName']
+
             try:
                 (source_epi, input_functional, info, confounds, mask_file) = setup(task, source_img, run_number)
             except FileNotFoundError:
@@ -268,7 +275,7 @@ def generate_report():
                                              confounds, outputdir, datadir)
             sections.append(task_section_template.render(
                 section_name="task-" + task + "_run-" + run_number,  # the link that IDs this section for the nav bar
-                task_title=task,
+                task_title=taskname,
                 run_number=str(i + 1),
                 len_run_list=len(run_list),
                 mean_tsnr=post_stats.calc_iqms()[0],
