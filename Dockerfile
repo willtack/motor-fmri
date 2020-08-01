@@ -90,7 +90,7 @@ RUN conda install -y python=3.7.1 \
     conda build purge-all; sync && \
     conda clean -tipsy && sync
 
-RUN pip install 'flywheel-sdk==10.*'
+RUN pip install 'flywheel-sdk==12.*'
 RUN pip install pandas
 RUN pip install pybids
 RUN pip install --no-cache fw-heudiconv \
