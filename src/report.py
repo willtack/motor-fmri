@@ -15,25 +15,44 @@ import poststats
 import argparse
 import modelfit
 import os
+import glob
 from bids import BIDSLayout
 from nipype.interfaces.base import Bunch
 from jinja2 import FileSystemLoader, Environment
 
 
-def setup(taskname, source_img, run_number):
+def setup(taskname, run_number):
     global aroma
-    events = pd.read_csv(os.path.join(bidsdir, "task-" + taskname + "_events.tsv"), sep="\t")
+    events = pd.read_csv(os.path.join(bidsdir, "task-" + taskname + "_events.tsv"), sep="\t")  # maybe use BIDSLayout for this?
 
-    print('Using ' + source_img.filename + ' as source image.')
-    confounds_path = os.path.join(fmriprepdir, "sub-" + source_img.entities['subject'],
-                                  "ses-" + source_img.entities['session'], "func",
-                                  "sub-" + source_img.entities['subject'] + "_ses-" + source_img.entities[
-                                      'session'] + "_task-" + taskname + "_run-" + run_number +
+    # # Get session andsubject from *FMRIPREP* BIDS layout
+    # fprep_layout = BIDSLayout(fmriprepdir)
+    # # test_img is only needed for determining session and subject--just randomly picking the first one from the list
+    # # however if there's nothing in the list...that's a problem.
+    # test_img = None
+    # try:
+    #     print("TYPE: " + type(test_img))
+    #     test_img = fprep_layout.get(suffix="bold", extension='nii.gz')[0]
+    # except IndexError as e:
+    #     print("ERROR: No BOLD images found in fmriprep directory.")
+    #     print(e)
+    #
+    # fmriprep_session = test_img.entities['session']
+    # fmriprep_subject = test_img.entities['subject']
+
+    subject_path = glob.glob(fmriprepdir+'/sub-*')[0]
+    fmriprep_subject = subject_path.split('-')[1]
+    session_path = glob.glob(subject_path+'/ses-*')[0]
+    fmriprep_session = session_path.split('-')[2]
+    confounds_path = os.path.join(fmriprepdir, "sub-" + fmriprep_subject,
+                                  "ses-" + fmriprep_session, "func",
+                                  "sub-" + fmriprep_subject + "_ses-" + fmriprep_session
+                                  + "_task-" + taskname + "_run-" + run_number +
                                   "_desc-confounds_regressors.tsv")
-    aroma_path = os.path.join(fmriprepdir, "sub-" + source_img.entities['subject'],
-                              "ses-" + source_img.entities['session'], "func",
-                              "sub-" + source_img.entities['subject'] + "_ses-" + source_img.entities[
-                                  'session'] + "_task-" + taskname + "_run-" + run_number +
+    aroma_path = os.path.join(fmriprepdir, "sub-" + fmriprep_subject,
+                              "ses-" + fmriprep_session, "func",
+                              "sub-" + fmriprep_subject + "_ses-" + fmriprep_session
+                              + "_task-" + taskname + "_run-" + run_number +
                               "_space-MNI152NLin6Asym_desc-smoothAROMAnonaggr_bold.nii.gz")
 
     simple_design = False
@@ -69,10 +88,10 @@ def setup(taskname, source_img, run_number):
                               durations=[list(events[events.trial_type == 'stimulus'].duration),
                                          list(events[events.trial_type == 'baseline'].duration)])]
 
-        prepped_img = os.path.join(fmriprepdir, "sub-" + source_img.entities['subject'],
-                                   "ses-" + source_img.entities['session'], "func",
-                                   "sub-" + source_img.entities['subject'] + "_ses-" + source_img.entities[
-                                       'session'] + "_task-" + taskname + "_run-" + run_number +
+        prepped_img = os.path.join(fmriprepdir, "sub-" + fmriprep_subject,
+                                   "ses-" + fmriprep_session, "func",
+                                   "sub-" + fmriprep_subject + "_ses-" + fmriprep_session
+                                   + "_task-" + taskname + "_run-" + run_number +
                                    "_space-MNI152NLin6Asym_desc-smoothAROMAnonaggr_bold.nii.gz")
     else:
         if simple_design:
@@ -120,21 +139,21 @@ def setup(taskname, source_img, run_number):
                                                    'rot_z'
                                                    ])]
 
-        prepped_img = os.path.join(fmriprepdir, "sub-" + source_img.entities['subject'],
-                                   "ses-" + source_img.entities['session'], "func",
-                                   "sub-" + source_img.entities['subject'] + "_ses-" + source_img.entities[
-                                       'session'] + "_task-" + taskname + "_run-" + run_number +
+        prepped_img = os.path.join(fmriprepdir, "sub-" + fmriprep_subject,
+                                   "ses-" + fmriprep_session, "func",
+                                   "sub-" + fmriprep_subject + "_ses-" + fmriprep_session
+                                   + "_task-" + taskname + "_run-" + run_number +
                                    "_space-MNI152NLin2009cAsym_desc-preproc_bold.nii.gz")
 
-    mask_file = os.path.join(fmriprepdir, "sub-" + source_img.entities['subject'],
-                              "ses-" + source_img.entities['session'], "func",
-                              "sub-" + source_img.entities['subject'] + "_ses-" + source_img.entities[
-                                  'session'] + "_task-" + taskname + "_run-" + run_number +
+    mask_file = os.path.join(fmriprepdir, "sub-" + fmriprep_subject,
+                              "ses-" + fmriprep_session, "func",
+                              "sub-" + fmriprep_subject + "_ses-" + fmriprep_session
+                              + "_task-" + taskname + "_run-" + run_number +
                               "_space-MNI152NLin2009cAsym_desc-brain_mask.nii.gz")
 
     print('Using ' + os.path.basename(prepped_img) + ' as preprocessed image.')
 
-    return source_img, prepped_img, subject_info, confounds, mask_file
+    return prepped_img, subject_info, confounds, mask_file
 
 
 def get_parser():
@@ -227,15 +246,15 @@ def generate_report():
             # determine full task name from BIDS meta data
             metadata = source_img.entities
             taskname = task
-            if 'TaskName' in metadata and metadata['TaskName']:
-                taskname = metadata['TaskName']
+            if 'FullTaskName' in metadata and metadata['FullTaskName']:
+                taskname = metadata['FullTaskName']
 
             try:
-                (source_epi, input_functional, info, confounds, mask_file) = setup(task, source_img, run_number)
+                (input_functional, info, confounds, mask_file) = setup(task, run_number)
             except FileNotFoundError:
                 continue
 
-            thresholded_img = modelfit.model_fitting(source_epi, input_functional, info, aroma, task, args, mask_file, i)
+            thresholded_img = modelfit.model_fitting(source_img, input_functional, info, aroma, task, args, mask_file, i)
 
             temporal_rois = {
                 "Superior TG": [lstg_mask, rstg_mask],
