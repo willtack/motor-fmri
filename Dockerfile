@@ -93,7 +93,7 @@ RUN conda install -y python=3.7.1 \
 RUN pip install 'flywheel-sdk==12.*'
 RUN pip install pandas
 RUN pip install pybids
-RUN pip install --no-cache fw-heudiconv \
+RUN pip install --no-cache fw-heudiconv==0.2.6 \
     && pip install --no-cache nipype \
     && pip install --no-cache nilearn \
     && pip install --no-cache jinja2 \
