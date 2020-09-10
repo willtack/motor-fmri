@@ -25,25 +25,22 @@ def setup(taskname, run_number):
     global aroma
     events = pd.read_csv(os.path.join(bidsdir, "task-" + taskname + "_events.tsv"), sep="\t")  # maybe use BIDSLayout for this?
 
-    # # Get session andsubject from *FMRIPREP* BIDS layout
-    # fprep_layout = BIDSLayout(fmriprepdir)
-    # # test_img is only needed for determining session and subject--just randomly picking the first one from the list
-    # # however if there's nothing in the list...that's a problem.
-    # test_img = None
-    # try:
-    #     print("TYPE: " + type(test_img))
-    #     test_img = fprep_layout.get(suffix="bold", extension='nii.gz')[0]
-    # except IndexError as e:
-    #     print("ERROR: No BOLD images found in fmriprep directory.")
-    #     print(e)
-    #
-    # fmriprep_session = test_img.entities['session']
-    # fmriprep_subject = test_img.entities['subject']
+    # # Get session and subject from *FMRIPREP* directory structure
+    try:
+        subject_paths = [fn for fn in glob.glob(fmriprepdir+'/sub-*') if not os.path.basename(fn).endswith('html')]
+        subject_path = subject_paths[0]
+        fmriprep_subject = subject_path.split('-')[1]
+        session_path = glob.glob(subject_path+'/ses-*')[0]
+        fmriprep_session = session_path.split('-')[2]
+    except IndexError as e:
+        print(glob.glob(fmriprepdir+'/sub-*'))
+        print(subject_path if subject_path else "no subject path")
+        print(fmriprep_subject if fmriprep_subject else "no fmriprep subject")
+        print(glob.glob(subject_path + '/ses-*') if subject_path else "no subject path")
+        print(session_path if session_path else "no session path")
+        print(fmriprep_session if fmriprep_session else "no fmriprep session")
+        print(e)
 
-    subject_path = glob.glob(fmriprepdir+'/sub-*')[0]
-    fmriprep_subject = subject_path.split('-')[1]
-    session_path = glob.glob(subject_path+'/ses-*')[0]
-    fmriprep_session = session_path.split('-')[2]
     confounds_path = os.path.join(fmriprepdir, "sub-" + fmriprep_subject,
                                   "ses-" + fmriprep_session, "func",
                                   "sub-" + fmriprep_subject + "_ses-" + fmriprep_session
@@ -220,6 +217,13 @@ def generate_report():
     # Subject ID
     sid = layout.get(return_type='id', target='subject')[0].strip("[']")
 
+    # T1w (for background image)
+    # anat_list = layout.get(suffix="T1w", extension="nii.gz")
+    # if len(anat_list) > 0:
+    #     anat_bids_image = anat_list[0]
+    #
+    # anat_input = anat_bids_image.path
+
     # Add the first section, a summary list and legend
     sections.append(summary_section_template.render(
         subject_id=sid,
@@ -290,8 +294,7 @@ def generate_report():
             roi_dict_list = [temporal_rois, frontal_rois, misc_rois, control_rois, scenemem_rois]
 
             # create a PostStats object for the current task. Add elements to the section based on the object's methods
-            post_stats = poststats.PostStats(sid, source_img, thresholded_img, task, roi_dict_list,
-                                             confounds, outputdir, datadir)
+            post_stats = poststats.PostStats(sid, source_img, thresholded_img, task, roi_dict_list, confounds, outputdir, datadir)
             sections.append(task_section_template.render(
                 section_name="task-" + task + "_run-" + run_number,  # the link that IDs this section for the nav bar
                 task_title=taskname,
@@ -352,8 +355,8 @@ if __name__ == "__main__":
     rhem_mask = os.path.join(datadir, "masks", "hem_right.nii.gz")
 
     mtl_mask = os.path.join(datadir, "masks", "mTL.nii.gz")
-    lmtl_mask = os.path.join(datadir, "masks", "mTL_left.nii.gz")
-    rmtl_mask = os.path.join(datadir, "masks", "mTL_right.nii.gz")
+    lmtl_mask = os.path.join(datadir, "masks", "mTL_left2.nii.gz")
+    rmtl_mask = os.path.join(datadir, "masks", "mTL_right2.nii.gz")
     lhc_mask = os.path.join(datadir, "masks", "hippocampus_left.nii.gz")
     rhc_mask = os.path.join(datadir, "masks", "hippocampus_right.nii.gz")
     lam_mask = os.path.join(datadir, "masks", "amygdala_left.nii.gz")
