@@ -289,7 +289,7 @@ class PostStats:
         mi = fsl.MeanImage()
         mi_run = mi.run(in_file=os.path.join(self.taskdir, self.task + "_input_functional_masked.nii.gz"))
         mean_img_path = mi_run.outputs.out_file
-        html_view = nilearn.plotting.view_img(self.img, threshold=0, bg_img=mean_img_path, vmax=10,
+        html_view = nilearn.plotting.view_img(self.img, threshold=0, bg_img='MNI152', vmax=10,
                                               title=self.task)
         html_view.save_as_html(os.path.join(self.outputdir, self.task, 'figs', self.task + "_viewer.html"))
         viewer_file = '"' + '/'.join(('.', self.task, 'figs', self.task+"_viewer.html")) + '"'
