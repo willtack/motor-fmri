@@ -16,3 +16,4 @@ todo
 stdev.nii.gz
 tsnr.nii.gz
 src/__pycache__
+build_and_deploy.sh
