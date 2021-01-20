@@ -61,6 +61,21 @@ if [[ ! -d ${FMRIPREP_DIR} ]]; then
   FMRIPREP_DIR=$(find $(pwd) -maxdepth 3 -type d | grep -E -v bids | grep -E -v fmriprepdir | grep -E fmriprep)
 fi
 
+# apply fmriprep MNI --> T1w transform to bring the masks into subject space
+#anatDir=$(find "${FMRIPREP_DIR}" -type d | grep anat) || error_exit "could not find anat directory in fmriprep folder"
+#transform=${anatDir}/sub-*_from-MNI152NLin6Asym_to-T1w_mode-image_xfm.h5
+#mkdir ${FLYWHEEL_BASE}/masks/native
+#if [[ -z $transform ]]; then #check that the transform exists
+#  for mask in "${FLYWHEEL_BASE}"/masks/*.nii.gz; do
+#   maskBaseName=$(basename "$mask" .nii.gz)
+#   antsApplyTransforms -d 3 -e 0 -i "$mask" -r "${anatDir}"/sub-P089_desc-preproc_T1w.nii.gz \
+#                       -o ${FLYWHEEL_BASE}/masks/native/"${maskBaseName}"_native.nii.gz -t "$transform"
+#
+#  # threshold and binarize
+#   fslmaths ${FLYWHEEL_BASE}/masks/native/"${maskBaseName}"_native.nii.gz -thr 0.5 -bin ${FLYWHEEL_BASE}/masks/native/"${maskBaseName}"_native.nii.gz
+#  done
+#fi
+
 # Copy event files to bids dataset
 cp ${FLYWHEEL_BASE}/events/* ${INPUT_DIR}/bids_dataset/
 
