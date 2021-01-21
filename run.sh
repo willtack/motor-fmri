@@ -47,6 +47,9 @@ if [[ ! -d ${BIDS_DIR} ]]; then
   /usr/local/miniconda/bin/python3 ${CODE_BASE}/create_archive_fw_heudiconv.py ||  error_exit "$CONTAINER Problem creating archive! Exiting (1)"
 fi
 
+# Move events files to bids_dataset top-level if necessary
+cp ${FLYWHEEL_BASE}/*.tsv ${INPUT_DIR}/bids_dataset/ || echo "no events files moved"
+
 ls -R ${BIDS_DIR}
 echo "$CONTAINER  Starting..."
 
@@ -77,7 +80,7 @@ fi
 #fi
 
 # Copy event files to bids dataset
-cp ${FLYWHEEL_BASE}/events/* ${INPUT_DIR}/bids_dataset/
+#cp ${FLYWHEEL_BASE}/events/* ${INPUT_DIR}/bids_dataset/
 
 # Create results directory
 SUB_ID=$(find /flywheel/v0/input/bids_dataset -maxdepth 1 -type d | grep sub | cut -d '/' -f 6)
@@ -98,7 +101,6 @@ if [[ $config_aroma == 'false' ]]; then aroma_FLAG=''; else aroma_FLAG='--aroma'
 /usr/local/miniconda/bin/python3 ${CODE_BASE}/report.py --bidsdir "${BIDS_DIR}" \
                                            --fmriprepdir "${FMRIPREP_DIR}" \
                                            --outputdir "${RESULTS_DIR}"    \
-                                           --tasks "${TASK_LIST}"  \
                                            --fwhm "${config_fwhm}" \
                                            --cthresh "${config_cthresh}" \
                                            --alpha "${config_alpha}" \

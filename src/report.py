@@ -23,7 +23,9 @@ from jinja2 import FileSystemLoader, Environment
 
 def setup(taskname, run_number):
     global aroma
-    events = pd.read_csv(os.path.join(bidsdir, "task-" + taskname + "_events.tsv"), sep="\t")  # maybe use BIDSLayout for this?
+    # events = pd.read_csv(os.path.join(bidsdir, "task-" + taskname + "_events.tsv"), sep="\t")  # maybe use BIDSLayout for this?
+    events_file = layout.get(task=taskname, extension='tsv')[0]
+    events = pd.read_csv(events_file.path, sep="\t")
 
     # # Get session and subject from *FMRIPREP* directory structure
     try:
