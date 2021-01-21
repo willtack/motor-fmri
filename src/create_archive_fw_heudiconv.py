@@ -62,7 +62,7 @@ if action == "Curate":
 elif action == "Export":
 
     downloads = export.gather_bids(fw, project_label, subjects, sessions)
-    export.download_bids(fw, downloads, "/flywheel/v0/input", dry_run=dry_run)
+    export.download_bids(fw, downloads, "/flywheel/v0/input", dry_run=dry_run, folders_to_download=['anat', 'func'])
     if not dry_run:
         pass
 
