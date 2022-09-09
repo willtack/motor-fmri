@@ -54,8 +54,8 @@ ls -R ${BIDS_DIR}
 echo "$CONTAINER  Starting..."
 
 # Get the list of tasks based on what's in the bids dataset
-TASK_LIST=$(/usr/local/miniconda/bin/python3 ${CODE_BASE}/filter_tasks.py --bidsdir ${BIDS_DIR})
-
+#TASK_LIST=$(/usr/local/miniconda/bin/python3 ${CODE_BASE}/filter_tasks.py --bidsdir ${BIDS_DIR})
+TASK_LIST='motor'
 # Position fmriprepdir contents
 # See if it's already been extracted (for testing purposes). If not, unzip and look in the appropriate location
 FMRIPREP_DIR=$(find $(pwd) -maxdepth 3 -type d | grep -E -v bids | grep -E -v fmriprepdir | grep -E fmriprep)
