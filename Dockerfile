@@ -1,6 +1,11 @@
 FROM ubuntu:16.04
 MAINTAINER Will Tackett <william.tackett@pennmedicine.upenn.edu>
 
+#Remove expired LetsEncrypt cert
+RUN rm /usr/share/ca-certificates/mozilla/DST_Root_CA_X3.crt && \
+ update-ca-certificates
+ENV REQUESTS_CA_BUNDLE "/etc/ssl/certs/ca-certificates.crt"
+
 # Make directory for flywheel spec (v0)
 ENV FLYWHEEL /flywheel/v0
 RUN mkdir -p ${FLYWHEEL}
@@ -90,9 +95,10 @@ RUN conda install -y python=3.7.1 \
     conda build purge-all; sync && \
     conda clean -tipsy && sync
 
+RUN pip install --upgrade pip
 RUN pip install 'flywheel-sdk==12.*'
 RUN pip install pandas
-RUN pip install pybids
+RUN pip install pybids==0.11.1
 RUN pip install --no-cache fw-heudiconv==0.3.3 \
     && pip install --no-cache nipype \
     && pip install --no-cache nilearn \
