@@ -1,11 +1,6 @@
 FROM ubuntu:16.04
 MAINTAINER Will Tackett <william.tackett@pennmedicine.upenn.edu>
 
-#Remove expired LetsEncrypt cert
-RUN rm /usr/share/ca-certificates/mozilla/DST_Root_CA_X3.crt && \
- update-ca-certificates
-ENV REQUESTS_CA_BUNDLE "/etc/ssl/certs/ca-certificates.crt"
-
 # Make directory for flywheel spec (v0)
 ENV FLYWHEEL /flywheel/v0
 RUN mkdir -p ${FLYWHEEL}
@@ -37,6 +32,11 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
                     nodejs && \
     apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+RUN rm /usr/share/ca-certificates/mozilla/DST_Root_CA_X3.crt && \
+ update-ca-certificates
+ENV REQUESTS_CA_BUNDLE "/etc/ssl/certs/ca-certificates.crt"
+
 
 # Installing and setting up miniconda
 RUN curl -sSLO https://repo.continuum.io/miniconda/Miniconda3-4.5.11-Linux-x86_64.sh && \
