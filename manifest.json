@@ -2,7 +2,7 @@
 	"name": "motorfmri",
 	"label": "motor fMRI",
 	"description": "For the analysis of motor imagery fMRI tasks",
-	"version": "0.0.4_0.0.1",
+	"version": "0.0.5_0.0.1",
 	"inputs": {
 		"api_key": {
 			"base": "api-key"
@@ -44,7 +44,7 @@
 	"custom": {
 		"gear-builder": {
 			"category": "analysis",
-			"image": "willtack/motorfmri:0.0.1"
+			"image": "willtack/motorfmri:0.0.5_0.0.1"
 		},
 		"flywheel": {
 			"suite": "BrainScienceCenter"
