@@ -5,7 +5,8 @@ import nipype.interfaces.afni as afni
 import nipype.interfaces.utility as util
 import nipype.pipeline.engine as pe
 import nibabel
-from nistats import thresholding
+# from nistats import thresholding
+import nilearn
 
 datadir = os.getcwd()
 template = os.path.join(datadir, "masks", "mni152.nii.gz")
@@ -29,7 +30,7 @@ def model_fitting(source_img, prepped_img, subject_info, aroma, task, args, mask
     os.mkdir(os.path.join(taskdir, 'stats'))
     os.mkdir(os.path.join(taskdir, 'figs'))
 
-    processed_image = preprocess(aroma, fwhm, prepped_img, mask_file, taskdir, task)
+    processed_image = preprocess(aroma, fwhm, prepped_img, mask_file, taskdir, task, run_number)
 
     task_vs_baseline = [task + " vs baseline", 'T', [task, 'baseline'], [1, -1]]  # set up contrasts
     contrasts = [task_vs_baseline]
@@ -108,23 +109,23 @@ def model_fitting(source_img, prepped_img, subject_info, aroma, task, args, mask
     z_img = list(res.nodes)[2].result.outputs.zstats[0]
 
     # Use False Discovery Rate theory to correct for multiple comparisons
-    fdr_thresh_img, fdr_threshold = thresholding.map_threshold(stat_img=z_img,
-                                                               mask_img=mask_file,
-                                                               alpha=alpha,
-                                                               height_control='fdr',
-                                                               cluster_threshold=cthresh)
-    print("Thresholding at FDR corrected threshold of " + str(fdr_threshold))
-    fdr_thresh_img_path = os.path.join(taskdir, task + '_fdr_thresholded_z.nii.gz')
+    fdr_thresh_img, fdr_threshold = nilearn.glm.threshold_stats_img(stat_img=z_img,
+                                                                    mask_img=mask_file,
+                                                                    alpha=alpha,
+                                                                    height_control=None)
+
+    #print("Thresholding at FDR corrected threshold of " + str(fdr_threshold))
+    fdr_thresh_img_path = os.path.join(taskdir, task + '_' + str(run_number + 1) + '_thresholded_z.nii.gz')
     nibabel.save(fdr_thresh_img, fdr_thresh_img_path)
 
     # Do a cluster analysis using the FDR corrected threshold on the original z_img
     print("Performing cluster analysis.")
     cl = fsl.Cluster(in_file=z_img, threshold=fdr_threshold)
-    cluster_file = os.path.join(taskdir, 'stats', task + "_cluster_stats.txt")
+    cluster_file = os.path.join(taskdir, 'stats', task + '_' + str(run_number + 1) + "_cluster_stats.txt")
     cluster_analysis(cluster_file, cl)
 
     # Resample the result image with AFNI
-    resample_fdr_thresh_img_path = os.path.join(taskdir, task + '_fdr_thresholded_z_resample.nii.gz')
+    resample_fdr_thresh_img_path = os.path.join(taskdir, task + '_' + str(run_number + 1)+ '_fdr_thresholded_z_resample.nii.gz')
     print("Resampling thresholded image to MNI space")
     resample = afni.Resample(master=template, out_file=resample_fdr_thresh_img_path, in_file=fdr_thresh_img_path)
     resample.run()
@@ -154,15 +155,16 @@ def cluster_analysis(cluster_file, cluster_run):
     f.close()
 
 
-def preprocess(aroma_config, fwhm_config, input_img, mask_file, taskdir, task):
+def preprocess(aroma_config, fwhm_config, input_img, mask_file, taskdir, task, run_number):
+
     # Resample to mask space
     # This is for AROMA images. Does it hurt non-AROMA?
-    resample_path = os.path.join(taskdir, task + '_resample.nii.gz')
+    resample_path = os.path.join(taskdir, task + '_' + str(run_number + 1) + '_resample.nii.gz')
     resample = afni.Resample(master=mask_file, out_file=resample_path, in_file=input_img)
     resample_run = resample.run()
 
     # Apply fmriprep-calculated brain mask to the functional image
-    masked_file_path = os.path.join(taskdir, task + "_input_functional_masked.nii.gz")
+    masked_file_path = os.path.join(taskdir, task + str(run_number + 1) + "_input_functional_masked.nii.gz")
     applymask = fsl.ApplyMask(mask_file=mask_file, out_file=masked_file_path)
     applymask.inputs.in_file = resample_run.outputs.out_file
     mask_run = applymask.run()

@@ -7,6 +7,8 @@
 from bids import BIDSLayout
 import argparse
 import sys
+import flywheel
+import json
 
 
 def main():
@@ -23,17 +25,32 @@ def main():
     layout = BIDSLayout(bidsdir)
     task_list = layout.get_tasks()
 
-    # move scenemem to end of list
-    if 'scenemem' in task_list:
-        task_list.append(task_list.pop(task_list.index('scenemem')))
+    # start up inputs
+    invocation = json.loads(open('config.json').read())
+    config = invocation['config']
+    inputs = invocation['inputs']
+    destination = invocation['destination']
+
+    fw = flywheel.Client(inputs['api_key']['key'])
+
+    # start up logic:
+    analysis_container = fw.get(destination['id'])
+    project_container = fw.get(analysis_container.parents['project'])
+
+    for task in task_list:
+        fw.download_file_from_project(project_container.id, f"task-{task}_events.tsv", f"/flywheel/v0/input/bids_dataset/task-{task}_events.tsv")
 
     # remove unhandled tasks
     if 'rest' in task_list:
         task_list.remove('rest')
-    if 'binder' in task_list:
-        task_list.remove('binder')
-    if 'verbgen' in task_list:
-        task_list.remove('verbgen')
+    if 'imotor2mm' in task_list:
+        task_list.remove('imotor2mm')
+    if 'imotor3mm' in task_list:
+        task_list.remove('imotor3mm')
+    if 'motor2mm' in task_list:
+        task_list.remove('motor2mm')
+    if 'motor3mm' in task_list:
+        task_list.remove('motor3mm')
 
     sys.stdout.write(' '.join(task_list))
 

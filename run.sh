@@ -48,20 +48,21 @@ if [[ ! -d ${BIDS_DIR} ]]; then
 fi
 
 # Move events files to bids_dataset top-level if necessary
-cp ${FLYWHEEL_BASE}/*.tsv ${INPUT_DIR}/bids_dataset/ || echo "no events files moved"
+#cp ${FLYWHEEL_BASE}/*.tsv ${INPUT_DIR}/bids_dataset/ || echo "no events files moved"
 
 ls -R ${BIDS_DIR}
 echo "$CONTAINER  Starting..."
 
 # Get the list of tasks based on what's in the bids dataset
-#TASK_LIST=$(/usr/local/miniconda/bin/python3 ${CODE_BASE}/filter_tasks.py --bidsdir ${BIDS_DIR})
-TASK_LIST='motor'
+TASK_LIST=$(/usr/local/miniconda/bin/python3 ${CODE_BASE}/filter_tasks.py --bidsdir ${BIDS_DIR})
+#TASK_LIST='motor'
+
 # Position fmriprepdir contents
 # See if it's already been extracted (for testing purposes). If not, unzip and look in the appropriate location
-FMRIPREP_DIR=$(find $(pwd) -maxdepth 3 -type d | grep -E -v bids | grep -E -v fmriprepdir | grep -E fmriprep)
+FMRIPREP_DIR=$(find $(pwd) -maxdepth 3 -type d | grep -E -v fmriprepdir | grep -E fmriprep)
 if [[ ! -d ${FMRIPREP_DIR} ]]; then
   unzip ${INPUT_DIR}/fmriprepdir/*.zip -d ${INPUT_DIR}
-  FMRIPREP_DIR=$(find $(pwd) -maxdepth 3 -type d | grep -E -v bids | grep -E -v fmriprepdir | grep -E fmriprep)
+  FMRIPREP_DIR=$(find $(pwd) -maxdepth 3 -type d | grep -E -v fmriprepdir | grep -E fmriprep)
 fi
 
 # apply fmriprep MNI --> T1w transform to bring the masks into subject space
@@ -104,6 +105,7 @@ if [[ $config_aroma == 'false' ]]; then aroma_FLAG=''; else aroma_FLAG='--aroma'
                                            --fwhm "${config_fwhm}" \
                                            --cthresh "${config_cthresh}" \
                                            --alpha "${config_alpha}" \
+                                           --tasks "${TASK_LIST}" \
                                             ${aroma_FLAG} \
                                             || error_exit "$CONTAINER Main script failed! Check traceback above."
 
@@ -135,9 +137,10 @@ for filename in $(find "${RESULTS_DIR}" -type f | grep data | grep .csv | grep -
   fi
 done
 
-sed -n '1~2!p' "$out_csv_file" > "${SUB_ID}_language_data.csv" # delete the headers (every other row)
+#sed -n '1~2!p' "$out_csv_file" > "${SUB_ID}_language_data.csv" # delete the headers (every other row)
 cp "${SUB_ID}_language_data.csv" ${OUTPUT_DIR}/
-cp "${RESULTS_DIR}"/scenemem/stats/scenemem_data.csv ${OUTPUT_DIR}/"${SUB_ID}_scenemem_data.csv"
+cp "${SUB_ID}_motor_data.csv" ${OUTPUT_DIR}/
+#cp "${RESULTS_DIR}"/scenemem/stats/scenemem_data.csv ${OUTPUT_DIR}/"${SUB_ID}_scenemem_data.csv"
 
 # Position results directory as zip file in /flywheel/v0/output
 zip -r "${SUB_ID}"_report_results.zip "${SUB_ID}"_report_results/*

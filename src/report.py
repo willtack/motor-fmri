@@ -21,7 +21,7 @@ from nipype.interfaces.base import Bunch
 from jinja2 import FileSystemLoader, Environment
 
 
-def setup(taskname, run_number):
+def setup(taskname, run_number, multiple_runs):
     global aroma
     # events = pd.read_csv(os.path.join(bidsdir, "task-" + taskname + "_events.tsv"), sep="\t")  # maybe use BIDSLayout for this?
     events_file = layout.get(task=taskname, extension='tsv')[0]
@@ -43,23 +43,36 @@ def setup(taskname, run_number):
         print(fmriprep_session if fmriprep_session else "no fmriprep session")
         print(e)
 
-    confounds_path = os.path.join(fmriprepdir, "sub-" + fmriprep_subject,
-                                  "ses-" + fmriprep_session, "func",
-                                  "sub-" + fmriprep_subject + "_ses-" + fmriprep_session
-                                  + "_task-" + taskname + "_run-" + run_number +
-                                  "_desc-confounds_regressors.tsv")
-    aroma_path = os.path.join(fmriprepdir, "sub-" + fmriprep_subject,
-                              "ses-" + fmriprep_session, "func",
-                              "sub-" + fmriprep_subject + "_ses-" + fmriprep_session
-                              + "_task-" + taskname + "_run-" + run_number +
-                              "_space-MNI152NLin6Asym_desc-smoothAROMAnonaggr_bold.nii.gz")
+    fprep_func_dir = os.path.join(fmriprepdir, "sub-" + fmriprep_subject, "ses-" + fmriprep_session, "func")
+    print(fprep_func_dir)
+    confounds_list = glob.glob(f"{fprep_func_dir}/*_desc-confounds_timeseries.tsv")
+    if not multiple_runs:
+        confounds_path = [f for f in confounds_list if taskname in f][0]
+    else:
+        confounds_path = [f for f in confounds_list if taskname in f and "run-" + run_number in f][0]
+    print("CONFOUNDS PATH: " + confounds_path)
+    aroma_list = glob.glob(f"{fprep_func_dir}/*_space-MNI152NLin6Asym_desc-smoothAROMAnonaggr_bold.nii.gz")
+    if not multiple_runs:
+        aroma_paths = [f for f in aroma_list if taskname in f]
+        if len(aroma_paths) > 0:
+                aroma_path = aroma_paths[0]
+    else:
+        aroma_paths = [f for f in aroma_list if taskname in f and "run-" + run_number in f]
+        if len(aroma_paths) > 0:
+                aroma_path = aroma_paths[0]
+
+    # confounds_path = os.path.join(fmriprepdir, "sub-" + fmriprep_subject,
+    #                               "ses-" + fmriprep_session, "func",
+    #                               "sub-" + fmriprep_subject + "_ses-" + fmriprep_session
+    #                               + "_task-" + taskname + "_desc-confounds_regressors.tsv")
+    # aroma_path = os.path.join(fmriprepdir, "sub-" + fmriprep_subject,
+    #                           "ses-" + fmriprep_session, "func",
+    #                           "sub-" + fmriprep_subject + "_ses-" + fmriprep_session
+    #                           + "_task-" + taskname +
+    #                           "_space-MNI152NLin6Asym_desc-smoothAROMAnonaggr_bold.nii.gz")
 
     simple_design = False
     confounds = ''
-
-    # Always use AROMA-denoised images for the scenemem task (if they're there)
-    if taskname == 'scenemem' and os.path.isfile(aroma_path):
-        aroma = True
 
     # Check if AROMA-denoised images exist. If they don't and the aroma config is selected, that's bad news
     if aroma and not os.path.isfile(aroma_path):
@@ -87,11 +100,18 @@ def setup(taskname, run_number):
                               durations=[list(events[events.trial_type == 'stimulus'].duration),
                                          list(events[events.trial_type == 'baseline'].duration)])]
 
-        prepped_img = os.path.join(fmriprepdir, "sub-" + fmriprep_subject,
-                                   "ses-" + fmriprep_session, "func",
-                                   "sub-" + fmriprep_subject + "_ses-" + fmriprep_session
-                                   + "_task-" + taskname + "_run-" + run_number +
-                                   "_space-MNI152NLin6Asym_desc-smoothAROMAnonaggr_bold.nii.gz")
+        # prepped_img = os.path.join(fmriprepdir, "sub-" + fmriprep_subject,
+        #                            "ses-" + fmriprep_session, "func",
+        #                            "sub-" + fmriprep_subject + "_ses-" + fmriprep_session
+        #                            + "_task-" + taskname +
+        #                            "_space-MNI152NLin6Asym_desc-smoothAROMAnonaggr_bold.nii.gz")
+
+        prepped_list = glob.glob(f"{fprep_func_dir}/*_space-MNI152NLin6Asym_desc-smoothAROMAnonaggr_bold.nii.gz")
+        if not multiple_runs:
+            prepped_img = [f for f in prepped_list if taskname in f][0]
+        else:
+            prepped_img = [f for f in prepped_list if taskname in f and "run-" + run_number in f][0]
+
     else:
         if simple_design:
             subject_info = [Bunch(conditions=[taskname],
@@ -138,17 +158,29 @@ def setup(taskname, run_number):
                                                    'rot_z'
                                                    ])]
 
-        prepped_img = os.path.join(fmriprepdir, "sub-" + fmriprep_subject,
-                                   "ses-" + fmriprep_session, "func",
-                                   "sub-" + fmriprep_subject + "_ses-" + fmriprep_session
-                                   + "_task-" + taskname + "_run-" + run_number +
-                                   "_space-MNI152NLin2009cAsym_desc-preproc_bold.nii.gz")
+        # prepped_img = os.path.join(fmriprepdir, "sub-" + fmriprep_subject,
+        #                            "ses-" + fmriprep_session, "func",
+        #                            "sub-" + fmriprep_subject + "_ses-" + fmriprep_session
+        #                            + "_task-" + taskname +
+        #                            "_space-MNI152NLin2009cAsym_desc-preproc_bold.nii.gz")
 
-    mask_file = os.path.join(fmriprepdir, "sub-" + fmriprep_subject,
-                              "ses-" + fmriprep_session, "func",
-                              "sub-" + fmriprep_subject + "_ses-" + fmriprep_session
-                              + "_task-" + taskname + "_run-" + run_number +
-                              "_space-MNI152NLin2009cAsym_desc-brain_mask.nii.gz")
+        prepped_list = glob.glob(f"{fprep_func_dir}/*_space-MNI152NLin2009cAsym_desc-preproc_bold.nii.gz")
+        if not multiple_runs:
+            prepped_img = [f for f in prepped_list if taskname in f][0]
+        else:
+            prepped_img = [f for f in prepped_list if taskname in f and "run-" + run_number in f][0]
+
+    # mask_file = os.path.join(fmriprepdir, "sub-" + fmriprep_subject,
+    #                           "ses-" + fmriprep_session, "func",
+    #                           "sub-" + fmriprep_subject + "_ses-" + fmriprep_session
+    #                           + "_task-" + taskname +
+    #                           "_space-MNI152NLin2009cAsym_desc-brain_mask.nii.gz")
+
+    mask_list = glob.glob(f"{fprep_func_dir}/*_space-MNI152NLin2009cAsym_desc-brain_mask.nii.gz")
+    if not multiple_runs:
+        mask_file = [f for f in mask_list if taskname in f][0]
+    else:
+        mask_file = [f for f in mask_list if taskname in f and "run-"+run_number in f][0]
 
     print('Using ' + os.path.basename(prepped_img) + ' as preprocessed image.')
 
@@ -211,7 +243,7 @@ def generate_report():
     """
 
     # Content to be published
-    title = "presurgical fMRI Report"
+    title = "RECOVER task-fMRI Report"
 
     # Produce our section blocks
     sections = list()
@@ -245,9 +277,16 @@ def generate_report():
     for task in task_list:
         # get all the runs from the BIDS dataset, loop through if more than one
         run_list = layout.get(task=task, suffix="bold", extension="nii.gz")
+
+        multiple_runs=False
+        if len(run_list) > 1:
+            multiple_runs=True
+        else:
+            multiple_runs=False
+
         for i in range(0, len(run_list)):
             source_img = run_list[i]
-            run_number = "0" + str(i + 1)
+            run_number = str(i + 1)
 
             # determine full task name from BIDS meta data
             metadata = source_img.entities
@@ -256,7 +295,7 @@ def generate_report():
                 taskname = metadata['FullTaskName']
 
             try:
-                (input_functional, info, confounds, mask_file) = setup(task, run_number)
+                (input_functional, info, confounds, mask_file) = setup(task, run_number, multiple_runs)
             except FileNotFoundError:
                 continue
 
@@ -284,19 +323,17 @@ def generate_report():
                 "Somatosensory Cortex": [lssc_mask, rssc_mask],
                 "V1": [lv1_mask, rv1_mask]
             }
-            scenemem_rois = {
-                "mTL": [lmtl_mask, rmtl_mask],
-                "Hippocampus": [lhc_mask, rhc_mask],
-                "Amygdala": [lam_mask, ram_mask],
-                "Parahippocampal": [lphg_mask, rphg_mask],
-                "Entorhinal cortex": [lent_mask, rent_mask],
-                "Fusiform gyrus": [lffg_mask, rffg_mask]
+            motor_rois = {
+                "SMA": [lsma_mask, rsma_mask],
+                "Premotor Cortex": [lpmc_mask, rpmc_mask],
+                "Anterior BA4": [lba4a_mask, rba4a_mask],
+                "Posterior BA4": [lba4p_mask, rba4p_mask]
             }
 
-            roi_dict_list = [temporal_rois, frontal_rois, misc_rois, control_rois, scenemem_rois]
+            roi_dict_list = [temporal_rois, frontal_rois, misc_rois, control_rois, motor_rois]
 
             # create a PostStats object for the current task. Add elements to the section based on the object's methods
-            post_stats = poststats.PostStats(sid, source_img, thresholded_img, task, roi_dict_list, confounds, outputdir, datadir)
+            post_stats = poststats.PostStats(sid, source_img, thresholded_img, task, run_number, roi_dict_list, confounds, outputdir, datadir)
             sections.append(task_section_template.render(
                 section_name="task-" + task + "_run-" + run_number,  # the link that IDs this section for the nav bar
                 task_title=taskname,
@@ -305,6 +342,8 @@ def generate_report():
                 mean_tsnr=post_stats.calc_iqms()[0],
                 mean_fd=post_stats.calc_iqms()[1],
                 gb_path=post_stats.create_glass_brain(),  # glass brain
+                mosaic_path=post_stats.create_mosaic(),
+                surface_path=post_stats.create_surface(),
                 viewer_path=post_stats.create_html_viewer(),  # interactive statistical map viewer
                 bar_path=post_stats.create_bar_plot(),  # bar plots
                 table=post_stats.generate_statistics_table()[0],  # statistics tables
@@ -356,20 +395,14 @@ if __name__ == "__main__":
     lhem_mask = os.path.join(datadir, "masks", "hem_left.nii.gz")
     rhem_mask = os.path.join(datadir, "masks", "hem_right.nii.gz")
 
-    mtl_mask = os.path.join(datadir, "masks", "mTL2.nii.gz")
-    lmtl_mask = os.path.join(datadir, "masks", "mTL_amygdala_left.nii.gz")
-    rmtl_mask = os.path.join(datadir, "masks", "mTL_amygdala_right.nii.gz")
-    lhc_mask = os.path.join(datadir, "masks", "hippocampus_left1.nii.gz")
-    rhc_mask = os.path.join(datadir, "masks", "hippocampus_right1.nii.gz")
-    lam_mask = os.path.join(datadir, "masks", "amygdala_left.nii.gz")
-    ram_mask = os.path.join(datadir, "masks", "amygdala_right.nii.gz")
-    lphg_mask = os.path.join(datadir, "masks", "phg_left.nii.gz")
-    rphg_mask = os.path.join(datadir, "masks", "phg_right.nii.gz")
-    lent_mask = os.path.join(datadir, "masks", "ento_left.nii.gz")
-    rent_mask = os.path.join(datadir, "masks", "ento_right.nii.gz")
-    lffg_mask = os.path.join(datadir, "masks", "ffg_left.nii.gz")
-    rffg_mask = os.path.join(datadir, "masks", "ffg_right.nii.gz")
-
+    lsma_mask = os.path.join(datadir, "masks", "sma_left.nii.gz")
+    rsma_mask = os.path.join(datadir, "masks", "sma_right.nii.gz")
+    lpmc_mask = os.path.join(datadir, "masks", "premc_left.nii.gz")
+    rpmc_mask = os.path.join(datadir, "masks", "premc_right.nii.gz")
+    lba4a_mask = os.path.join(datadir, "masks", "ba4a_left.nii.gz")
+    rba4a_mask = os.path.join(datadir, "masks", "ba4a_right.nii.gz")
+    lba4p_mask = os.path.join(datadir, "masks", "ba4p_left.nii.gz")
+    rba4p_mask = os.path.join(datadir, "masks", "ba4p_right.nii.gz")
     template = os.path.join(datadir, "masks", "mni152.nii.gz")
 
     # Parse command line arguments

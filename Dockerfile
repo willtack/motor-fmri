@@ -82,7 +82,7 @@ RUN conda install -y python=3.7.1 \
                      mkl=2019.1 \
                      mkl-service \
                      scikit-learn=0.20.2 \
-                     matplotlib=2.2.3 \
+#                     matplotlib=3.3.0 \
                      seaborn=0.9.0 \
                      pandas=0.24.0 \
                      libxml2=2.9.9 \
@@ -104,7 +104,8 @@ RUN pip install --no-cache fw-heudiconv==0.3.3 \
     && pip install --no-cache nilearn \
     && pip install --no-cache jinja2 \
     && pip install --no-cache nibabel \
-    && pip install --no-cache nistats
+    && pip install --no-cache nistats \
+    && pip install --no-cache matplotlib==3.3.0
 
 COPY manifest.json ${FLYWHEEL}/manifest.json
 COPY run.sh /flywheel/v0/run.sh

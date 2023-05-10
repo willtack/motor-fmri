@@ -9,25 +9,14 @@
         <li>Mean FD = {{mean_fd}}</li>
     </ul>
 
-        <p style="margin-right: 10%;">
-            {% if task_title == 'Object Naming' %}
-            Object Naming is an expressive language paradigm in which the subject is shown an object and is asked to silently name the presented object. The control block consists of a nonsense symbol to exclude the visual component from the activation maps. The objects are presented in black and white.
-            {% elif task_title == 'Rhyme Matching'%}
-            Rhyming is considered a phonologic task that has been shown to robustly activate the Broca area in the dominant hemisphere. Rhyming also activates the Wernicke area though not as strongly as seen in Broca. In addition to the above regions, Rhyming has been shown to activate the inferior parietal lobule, the dorsolateral prefrontal cortex, and posterior lateral gyrus.There is also activation of the posterior temporo-occipital regions due to involvement of the visual processing pathways.
-            {% elif task_title == 'Sentence Completion'%}
-            Sentence completion is a semantic language paradigm that is effective in activating the superior temporal gyrus in the Wernicke area. SC can also activate the Broca area in the dominant hemisphere because the task requires both receptive and expressive language processing, though activation of Broca is slightly less robust than in Wernicke. Additionally, the pattern of activation with SC is less lateralized to Broca compared with SWG because of involvement of the homologous right hemisphere in speech-comprehension tasks, which invoke executive processing. Since verbal comprehension tasks such as SC involve visual processing, activation of the ventral language stream, including the visual word form area, can also be seen.
-            {% elif task_title == 'Word Generation'%}
-            The silent word generation task activates mainly frontal lobe language and cognitive support areas but is less consistent activators of temporal language regions.11,14,19,20 Specifically, SWG tasks yield reliable activation of the inferior frontal gyrus, dorsolateral prefrontal cortex, and superior frontal gyrus, with variable activation in the anterior cingulate gyrus, presupplementary motor area, and inferior, middle, and superior temporal gyri.
-            {% elif task_title == 'Scene Memory'%}
-            The scene memory task asks subjects to make a judgement of whether or not a visually complex scene is meaningful to them.
-            {% else %}
-            Task not recognized.
-            {% endif %}
-        </p>
-
-    <h3 class="elem-title">Glass brain</h3>
+    <h3 class="elem-title">Mosaic</h3>
     <div class="elem-image">
-        <object class="svg-reportlet" type="image/svg+xml" data={{gb_path}}></object>
+        <object class="svg-reportlet" type="image/svg+xml" data={{mosaic_path}}></object>
+    </div>
+
+    <h3 class="elem-title">Surface</h3>
+    <div class="elem-image">
+        <object class="svg-reportlet" type="image/svg+xml" data={{surface_path}}></object>
     </div>
 
     <h3 style="margin-top: 20px"><a href={{viewer_path}} >Statistical Map Viewer</a></h3>

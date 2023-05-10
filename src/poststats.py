@@ -21,11 +21,12 @@ class PostStats:
     Class to perform analyses on data
     """
 
-    def __init__(self, subject_id, source_img, img, task, roi_dict_list, confounds, outputdir, datadir):
+    def __init__(self, subject_id, source_img, img, task, run_number, roi_dict_list, confounds, outputdir, datadir):
         self.subject_id = subject_id
         self.source_img = source_img.path
         self.img = img
         self.task = task
+        self.run = run_number
         self.outputdir = outputdir
         self.taskdir = os.path.join(outputdir, self.task)
 
@@ -34,15 +35,15 @@ class PostStats:
         self.frontal_dict = roi_dict_list[1]
         self.misc_dict = roi_dict_list[2]
         self.control_dict = roi_dict_list[3]
-        self.scenemem_dict = roi_dict_list[4]
+        self.motor_dict = roi_dict_list[4]
 
         self.confounds = confounds  # confounds tsv (returned from setup())
         self.mtl_mask = os.path.join(datadir, "masks", "hpf_bin.nii.gz")
 
         # Assemble lists
-        if self.task == 'scenemem':
+        if self.task == 'motor':
             # Calculate the statistics in each dictionary of regions
-            self.left_scene_stats, self.right_scene_stats, self.left_scene_ns, self.right_scene_ns, self.scene_ars = self.calc_stats(self.scenemem_dict)
+            self.left_scene_stats, self.right_scene_stats, self.left_scene_ns, self.right_scene_ns, self.scene_ars = self.calc_stats(self.motor_dict)
             # Define lists for later use constructing tables
             self.left_stats_list = self.left_scene_stats
             self.right_stats_list = self.right_scene_stats
@@ -73,11 +74,26 @@ class PostStats:
 
     def create_glass_brain(self):
         nilearn.plotting.plot_glass_brain(nilearn.image.smooth_img(self.img, 4),
-                                          output_file=os.path.join(self.outputdir, self.task, 'figs', self.task + "_gb.svg"),
+                                          output_file=os.path.join(self.outputdir, self.task, 'figs', self.task + "_" + self.run + "_gb.svg"),
                                           display_mode='lyrz', colorbar=True, plot_abs=False, threshold=0)
 
-        out_svg = '"' + '/'.join(('.', self.task, "figs", self.task+"_gb.svg")) + '"'
+        out_svg = '"' + '/'.join(('.', self.task, "figs", self.task+ "_" + self.run + "_gb.svg")) + '"'
         return out_svg
+
+    def create_mosaic(self):
+        nilearn.plotting.plot_stat_map(self.img,display_mode='z',cut_coords=8, output_file=os.path.join(self.outputdir, self.task, 'figs', self.task + "_" + self.run + "_gb.svg"))
+        out_mosaic_svg = '"' + '/'.join(('.', self.task, "figs", self.task + "_" + self.run + "_mosaic.svg")) + '"'
+        return out_mosaic_svg
+
+    def create_surface(self):
+        nilearn.plot_img_on_surf(self.img,
+                                  views=['lateral', 'medial'],
+                                  hemispheres=['left', 'right'],
+                                  colorbar=True, threshold=1,
+                                  output_file=os.path.join(self.outputdir, self.task, 'figs', self.task + "_" + self.run + "_surf.svg"))
+
+        out_surf_svg = '"' + '/'.join(('.', self.task, "figs", self.task + "_" + self.run + "_mosaic.svg")) + '"'
+        return out_surf_svg
 
     def get_mask_vox(self, msk):
         mask_stat = fsl.ImageStats(in_file=msk, op_string=' -V')
@@ -179,7 +195,7 @@ class PostStats:
         # Get table, a pandas Dataframe
         df = self.generate_statistics_table()[1]
         # Plot figure
-        if self.task == 'scenemem':
+        if self.task == 'motor':
             plt.figure(figsize=(8, 7))
             a = sns.barplot(x="roi", y="percent", hue="hemisphere", palette=["gray", "firebrick"], data=df)
             a.set_ylabel("Percent Activated Voxels in ROI")
@@ -199,19 +215,19 @@ class PostStats:
         plt.ylim(0, 100)
         plt.tight_layout()
         # plt.xticks(rotation=45)
-        plt.savefig(os.path.join(self.outputdir, self.task, 'figs', self.task + "_bar.svg"))
+        plt.savefig(os.path.join(self.outputdir, self.task, 'figs', self.task + "_" + self.run + "_bar.svg"))
         plt.close()
-        plot_file = '"' + '/'.join(('.', self.task, 'figs', self.task+"_bar.svg")) + '"'
+        plot_file = '"' + '/'.join(('.', self.task, 'figs', self.task + "_" + self.run + "_bar.svg")) + '"'
         return plot_file
 
     def generate_statistics_table(self):
         # Construct two tables: one to display in html report, one as basis for the bar plot
-        if self.task == 'scenemem':
+        if self.task == 'motor':
             left_stats_list = self.left_scene_stats
             right_stats_list = self.right_scene_stats
             ars_list = self.scene_ars
-            hem_list = ['left'] * 6 + ['right'] * 6
-            group_list = ['scenemem'] * 12
+            hem_list = ['left'] * 4 + ['right'] * 4
+            group_list = ['motor'] * 8
             list_of_rois = self.scene_roi_list
         else:
             left_stats_list = self.left_temp_stats + self.left_front_stats + self.left_misc_stats + self.left_ctrl_stats
@@ -227,7 +243,7 @@ class PostStats:
         d4table = {'Left %': left_stats_list, 'Right %': right_stats_list, 'Laterality Index': ars_list}
         df4plot = pd.DataFrame(data=d4plot)
         df4table = pd.DataFrame(data=d4table, index=list_of_rois)
-        df4table.to_csv(os.path.join(self.outputdir, self.task, 'figs', self.task + "_html_table.csv"))
+        df4table.to_csv(os.path.join(self.outputdir, self.task, 'figs', self.task + "_" + self.run + "_html_table.csv"))
         html_table = df4table.to_html()
 
         return html_table, df4plot
@@ -258,10 +274,10 @@ class PostStats:
         data = np.array([row])
         df = pd.DataFrame(data, columns=column_labels)
         df.set_index('subject', inplace=True)
-        df.to_csv(os.path.join(self.outputdir, self.task, 'stats', self.task + "_data.csv"))
+        df.to_csv(os.path.join(self.outputdir, self.task, 'stats', self.task + "_" + self.run + "_data.csv"))
 
     def generate_csv_wrap(self, task):
-        if task == 'scenemem':
+        if task == 'motor':
             self.generate_csv(self.left_stats_list, self.right_stats_list, self.left_ns_list, self.right_ns_list, self.ars, self.scene_roi_list)
         else:
             self.generate_csv(self.left_stats_list, self.right_stats_list, self.left_ns_list, self.right_ns_list, self.ars, self.lang_roi_list)
@@ -270,7 +286,7 @@ class PostStats:
         # tSNR
         tsnr = TSNR()
         tsnr.inputs.in_file = self.source_img
-        tsnr.inputs.mean_file = os.path.join(self.outputdir, self.task, self.task + "_mean_tsnr.nii.gz")
+        tsnr.inputs.mean_file = os.path.join(self.outputdir, self.task, self.task + "_" + self.run + "_mean_tsnr.nii.gz")
         tsnr_res = tsnr.run()
         mean_tsnr_img = tsnr_res.outputs.mean_file
         stat = fsl.ImageStats(in_file=mean_tsnr_img, op_string=' -M')
@@ -286,11 +302,11 @@ class PostStats:
         return mean_tsnr, mean_fd
 
     def create_html_viewer(self):
-        mi = fsl.MeanImage()
-        mi_run = mi.run(in_file=os.path.join(self.taskdir, self.task + "_input_functional_masked.nii.gz"))
-        mean_img_path = mi_run.outputs.out_file
+        #mi = fsl.MeanImage()
+        #mi_run = mi.run(in_file=os.path.join(self.taskdir, self.task + "_input_functional_masked.nii.gz"))
+        #mean_img_path = mi_run.outputs.out_file
         html_view = nilearn.plotting.view_img(self.img, threshold=0, bg_img='MNI152', vmax=10,
                                               title=self.task)
-        html_view.save_as_html(os.path.join(self.outputdir, self.task, 'figs', self.task + "_viewer.html"))
-        viewer_file = '"' + '/'.join(('.', self.task, 'figs', self.task+"_viewer.html")) + '"'
+        html_view.save_as_html(os.path.join(self.outputdir, self.task, 'figs', self.task + "_" + self.run + "_viewer.html"))
+        viewer_file = '"' + '/'.join(('.', self.task, 'figs', self.task + "_" + self.run +"_viewer.html")) + '"'
         return viewer_file

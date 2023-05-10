@@ -1,8 +1,8 @@
 {
 	"name": "motorfmri",
-	"label": "motor fMRI",
-	"description": "For the analysis of motor imagery fMRI tasks",
-	"version": "0.0.5_0.0.1",
+	"label": "RECOVER fMRI: analyzing motor imagery and language fMRI tasks",
+	"description": "For the analysis of RECOVER motor imagery and language fMRI tasks",
+	"version": "0.1.8",
 	"inputs": {
 		"api_key": {
 			"base": "api-key"
@@ -19,12 +19,12 @@
 			"type": "boolean"
 		},
 		"alpha": {
-			"default": 0.05,
+			"default": 0.20,
 			"description": "Alpha value for thresholding",
 			"type": "number"
 		},
 		"cluster_size_thresh": {
-			"default": 150,
+			"default": 100,
 			"description": "Cluster extent threshold",
 			"type": "integer"
 		},
@@ -44,7 +44,7 @@
 	"custom": {
 		"gear-builder": {
 			"category": "analysis",
-			"image": "willtack/motorfmri:0.0.5_0.0.1"
+			"image": "willtack/motorfmri:0.1.8"
 		},
 		"flywheel": {
 			"suite": "BrainScienceCenter"
