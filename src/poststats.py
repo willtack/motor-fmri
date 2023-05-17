@@ -81,18 +81,28 @@ class PostStats:
         return out_svg
 
     def create_mosaic(self):
-        nilearn.plotting.plot_stat_map(self.img,display_mode='z',cut_coords=8, output_file=os.path.join(self.outputdir, self.task, 'figs', self.task + "_" + self.run + "_gb.svg"))
+        lang_roi = os.path.join(self.datadir, "masks", "lang_roi.nii.gz")
+        motor_roi = os.path.join(self.datadir, "masks", "motor_roi.nii.gz")
+
+        if self.task == 'motor':
+            display = nilearn.plotting.plot_roi(motor_roi, display_mode='z', cut_coords=8, alpha=0.4)
+            display.add_overlay(self.img, **{"cmap": "hot"})
+        else:
+            display = nilearn.plotting.plot_roi(lang_roi, display_mode='z',cut_coords=8, alpha=0.4)
+            display.add_overlay(self.img, **{"cmap": "hot"})
+
+        display.savefig(os.path.join(self.outputdir, self.task, 'figs', self.task + "_" + self.run + "_mosaic.svg"))
         out_mosaic_svg = '"' + '/'.join(('.', self.task, "figs", self.task + "_" + self.run + "_mosaic.svg")) + '"'
         return out_mosaic_svg
 
     def create_surface(self):
-        nilearn.plot_img_on_surf(self.img,
+        nilearn.plotting.plot_img_on_surf(self.img,
                                   views=['lateral', 'medial'],
                                   hemispheres=['left', 'right'],
                                   colorbar=True, threshold=1,
                                   output_file=os.path.join(self.outputdir, self.task, 'figs', self.task + "_" + self.run + "_surf.svg"))
 
-        out_surf_svg = '"' + '/'.join(('.', self.task, "figs", self.task + "_" + self.run + "_mosaic.svg")) + '"'
+        out_surf_svg = '"' + '/'.join(('.', self.task, "figs", self.task + "_" + self.run + "_surf.svg")) + '"'
         return out_surf_svg
 
     def get_mask_vox(self, msk):

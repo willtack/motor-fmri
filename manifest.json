@@ -2,7 +2,7 @@
 	"name": "motorfmri",
 	"label": "RECOVER fMRI: analyzing motor imagery and language fMRI tasks",
 	"description": "For the analysis of RECOVER motor imagery and language fMRI tasks",
-	"version": "0.1.8",
+	"version": "0.1.9",
 	"inputs": {
 		"api_key": {
 			"base": "api-key"
@@ -44,7 +44,7 @@
 	"custom": {
 		"gear-builder": {
 			"category": "analysis",
-			"image": "willtack/motorfmri:0.1.8"
+			"image": "willtack/motorfmri:0.1.9"
 		},
 		"flywheel": {
 			"suite": "BrainScienceCenter"

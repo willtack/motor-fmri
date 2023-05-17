@@ -101,7 +101,7 @@ RUN pip install pandas
 RUN pip install pybids==0.11.1
 RUN pip install --no-cache fw-heudiconv==0.3.3 \
     && pip install --no-cache nipype \
-    && pip install --no-cache nilearn \
+    && pip install --no-cache nilearn==0.10.1 \
     && pip install --no-cache jinja2 \
     && pip install --no-cache nibabel \
     && pip install --no-cache nistats \
