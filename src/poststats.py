@@ -29,6 +29,7 @@ class PostStats:
         self.run = run_number
         self.outputdir = outputdir
         self.taskdir = os.path.join(outputdir, self.task)
+        self.datadir = datadir
 
         self.roi_dict_list = roi_dict_list  # list of dictionaries with key-value pairs of "ROI label": ['path/to/leftroimask.nii.gz', '/path/to/rightroimask.nii.gz']
         self.temporal_dict = roi_dict_list[0]
@@ -85,14 +86,14 @@ class PostStats:
         motor_roi = os.path.join(self.datadir, "masks", "motor_roi.nii.gz")
 
         if self.task == 'motor':
-            display = nilearn.plotting.plot_roi(motor_roi, display_mode='z', cut_coords=8, alpha=0.4)
-            display.add_overlay(self.img, **{"cmap": "hot"})
+            display = nilearn.plotting.plot_roi(motor_roi, display_mode='z', cut_coords=8, alpha=0.75, cmap='gray')
+            display.add_overlay(self.img, **{"cmap": "cold_hot"})
         else:
-            display = nilearn.plotting.plot_roi(lang_roi, display_mode='z',cut_coords=8, alpha=0.4)
-            display.add_overlay(self.img, **{"cmap": "hot"})
+            display = nilearn.plotting.plot_roi(lang_roi, display_mode='z', cut_coords=8, alpha=0.75, cmap='gray')
+            display.add_overlay(self.img, **{"cmap": "cold_hot"})
 
-        display.savefig(os.path.join(self.outputdir, self.task, 'figs', self.task + "_" + self.run + "_mosaic.svg"))
-        out_mosaic_svg = '"' + '/'.join(('.', self.task, "figs", self.task + "_" + self.run + "_mosaic.svg")) + '"'
+        display.savefig(os.path.join(self.outputdir, self.task, 'figs', self.task + "_" + self.run + "_mosaic.png"))
+        out_mosaic_svg = '"' + '/'.join(('.', self.task, "figs", self.task + "_" + self.run + "_mosaic.png")) + '"'
         return out_mosaic_svg
 
     def create_surface(self):
@@ -100,9 +101,9 @@ class PostStats:
                                   views=['lateral', 'medial'],
                                   hemispheres=['left', 'right'],
                                   colorbar=True, threshold=1,
-                                  output_file=os.path.join(self.outputdir, self.task, 'figs', self.task + "_" + self.run + "_surf.svg"))
+                                  output_file=os.path.join(self.outputdir, self.task, 'figs', self.task + "_" + self.run + "_surf.png"))
 
-        out_surf_svg = '"' + '/'.join(('.', self.task, "figs", self.task + "_" + self.run + "_surf.svg")) + '"'
+        out_surf_svg = '"' + '/'.join(('.', self.task, "figs", self.task + "_" + self.run + "_surf.png")) + '"'
         return out_surf_svg
 
     def get_mask_vox(self, msk):
